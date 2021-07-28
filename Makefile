@@ -9,6 +9,8 @@ ccflags-y := \
   -Wno-declaration-after-statement \
   $(CCFLAGS)
 
+#CFLAGS_intercept-module.o := -D_FORTIFY_SOURCE=0
+
 all:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
 clean:
