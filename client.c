@@ -42,14 +42,15 @@ int main() {
     servaddr.sin_port = htons(PORT);
     servaddr.sin_addr.s_addr = inet_addr("192.168.1.25");
     //servaddr.sin_addr.s_addr = INADDR_ANY;
-    
+    unsigned long uid = 0;
+
     while(1) {
         /* Prepare payload */
         bzero(payload, PAYLOAD_SIZE);
 
         unsigned long now = get_nsecs();
         memcpy(payload, hello, strlen(hello));
-        int written = sprintf(payload+strlen(hello), "%lu", now);
+        int written = sprintf(payload+strlen(hello), "uid[%lu] timestamp[%lu]\n", uid, now);
         //payload[strlen(hello)+written] = 0;
         // memcpy(payload+strlen(hello)+written, 0, 1);
         // bzero(payload+strlen(hello)+written, 1);
@@ -61,8 +62,8 @@ int main() {
         int sent = sendto(sockfd, (const char *)payload, strlen(payload),
             MSG_CONFIRM, (const struct sockaddr *) &servaddr, 
                 sizeof(servaddr));
-        printf("Hello message sent (%lu of %d bytes): %lu\n", strlen(payload), sent, now);
-                
+        printf("Hello message [%lu] sent (%lu of %d bytes): %lu\n", uid, strlen(payload), sent, now);
+        uid += 1;
         // n = recvfrom(sockfd, (char *)buffer, MAXLINE, 
         //             MSG_WAITALL, (struct sockaddr *) &servaddr,
         //             &len);

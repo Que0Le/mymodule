@@ -17,26 +17,23 @@
 #include <linux/udp.h>
 #include <linux/getcpu.h>
 
-#include<linux/string.h>
+#include <linux/string.h>
 
 static const char *filename = "intercept_mmap";
 
 enum { 
     BUFFER_SIZE = 1024,
-    PKT_BUFFER_SIZE = 128,
-    PKTS_PER_BUFFER = 8,    // = BUFFER_SIZE / PKT_BUFFER_SIZE
-    MAX_PKT = 100,
-    MAX_TRY = 100
+    PKT_BUFFER_SIZE = 256,
+    MAX_PKT = 100
 };
 
 struct mmap_info {
 	char *data;
 };
-// char *datafromhere;
 
 static unsigned char *buff_from_here;
-static unsigned char *buff_temp;
-unsigned int current_index = 0; // index of (should be) next free cell
+// unsigned int current_index = 0; // where to write pkt
+// unsigned int last_flush_index = 0;  // last pkt flush position
 int status[MAX_PKT] = {0};
 
 unsigned int count_pkt = 0;
@@ -88,69 +85,56 @@ static int mmap(struct file *filp, struct vm_area_struct *vma)
 
 static int open(struct inode *inode, struct file *filp)
 {
-	struct mmap_info *info;
+	// struct mmap_info *info;
 
 	pr_info("open\n");
-	info = kmalloc(sizeof(struct mmap_info), GFP_KERNEL);
-	pr_info("virt_to_phys = 0x%llx\n", (unsigned long long)virt_to_phys((void *)info));
-	info->data = (char *)get_zeroed_page(GFP_KERNEL);
-	// info->data = buff_from_here;
-	memcpy(info->data, "asdf", 4);
-	filp->private_data = info;
+	// info = kmalloc(sizeof(struct mmap_info), GFP_KERNEL);
+	// pr_info("virt_to_phys = 0x%llx\n", (unsigned long long)virt_to_phys((void *)info));
+	// info->data = (char *)get_zeroed_page(GFP_KERNEL);
+	// memcpy(info->data, "asdf", 4);	
+	// filp->private_data = info;
 	return 0;
 }
 
 static ssize_t read(struct file *filp, char __user *buf, size_t len, loff_t *off)
 {
-	struct mmap_info *info;
+	// struct mmap_info *info;
 	ssize_t ret;
 
 	printk(KERN_INFO "read: len[%zu] off[%zu]\n", len, (size_t)*off);
 	if ((size_t)BUFFER_SIZE <= *off) {
 		ret = 0;
 	} else {
-        // This 2 lines work (not neccessary) so let it be here.
-		info = filp->private_data;
-		ret = min(len, (size_t)BUFFER_SIZE - (size_t)*off);
+        
 
-        /* We return buff_temp (BUFFER_SIZE) data to userspace */
-        unsigned int ci = current_index;
-        memset(buff_temp, '\0', BUFFER_SIZE);
-        int copied_pkts = 0;
-        int copied_index[PKTS_PER_BUFFER];
-        for (int i=0; i<PKTS_PER_BUFFER; i++)
-            copied_index[i] = -1;
-        int try = 0;
-        while (copied_pkts < PKTS_PER_BUFFER && try<MAX_PKT) {
-            if (status[ci] != 0) {
-                memcpy(buff_temp+copied_pkts*PKT_BUFFER_SIZE, 
-                       buff_from_here + ci*PKT_BUFFER_SIZE, PKT_BUFFER_SIZE);
-                copied_index[copied_pkts] = ci;
-                copied_pkts += 1;
-            }
-            ci = (ci + 1) % MAX_PKT;
-            try += 1;
-        }
-        if (copied_pkts==0) {
-            return 0;
-        }
-        printk(KERN_INFO "copied [%d] pkts\n", copied_pkts);
-        /* Deliver to userspace */
-        if (copy_to_user(buf, buff_temp, BUFFER_SIZE)) {
-            // unsigned long __copy_to_user (void __user * to,const void * from,unsigned long n);
-            // Returns number of bytes that could not be copied. On success, this will be zero. 
-            ret = -EFAULT;
-        } else {
-            // Copy success. Clean up the bufffer slot(s)
-            for (int i=0; i<PKTS_PER_BUFFER; i++) {
-                if (copied_index[i] != -1) {
-                    memset(buff_from_here + copied_index[i]*PKT_BUFFER_SIZE, '\0', PKT_BUFFER_SIZE);
-                    status[copied_index[i]] = 0;
+	// 	// info = filp->private_data;
+	// 	ret = min(len, (size_t)BUFFER_SIZE - (size_t)*off);
+	// 	// if (copy_to_user(buf, info->data + *off, ret)) {
+
+        for (int i=0; i<MAX_PKT; i++) {
+            if (status[i] != 0) {
+                if (copy_to_user(buf, buff_from_here + i*PKT_BUFFER_SIZE + *off, ret)) {
+                    ret = -EFAULT;
+                } else {
+                    *off += ret;
+                    // Clean up the bufffer slot
+                    memset(buff_from_here + i*PKT_BUFFER_SIZE, '\0', PKT_BUFFER_SIZE);
+                    status[i] = 0;
                 }
+                break;
             }
         }
-    }
-	return BUFFER_SIZE;
+
+        // info = filp->private_data;
+        // sprintf(info->data, "longgggggggggg%d\n", count_pkt);
+        // ret = min(len, (size_t)BUFFER_SIZE - (size_t)*off);
+        // if (copy_to_user(buf, info->data + *off, ret)) {
+        //     ret = -EFAULT;
+        // } else {
+        //     *off += ret;
+        // }
+	}
+	return ret;
 }
 
 static ssize_t write(struct file *filp, const char __user *buf, size_t len, loff_t *off)
@@ -217,34 +201,41 @@ rx_handler_result_t rxhPacketIn(struct sk_buff **ppkt) {
     // cpuid = raw_smp_processor_id();
     // printk(KERN_INFO "[RXH] CPU id [%i], Source IP [%x], Destination IP [%x], Protocol [%i]\n",
     //     cpuid, ip_header->saddr, ip_header->daddr, ip_header->protocol);
+    
 
+    // 14 ethernet
+    // 20 ip
+    // 8 udp
     /* Parse UDP header */
     udp_udphdr = (struct udphdr *)skb_transport_header(pkt);
     if ((unsigned int)ntohs(udp_udphdr->dest) != 8080) {
         return RX_HANDLER_PASS;
     }
+
+    printk(KERN_INFO "UDP srcPort [%u], destPort[%u], len[%u], check_sum[%u], payload_byte[%d]\n",
+        (unsigned int)ntohs(udp_udphdr->source) ,(unsigned int)ntohs(udp_udphdr->dest), 
+        (unsigned int)ntohs(udp_udphdr->len), (unsigned int)ntohs(udp_udphdr->check), 
+        (unsigned int)ntohs(udp_udphdr->len) - 8);
+    count_pkt += 1;
+
+    // unsigned char *tt = (unsigned char *) kmalloc(100, GFP_KERNEL);
+    // memset(tt, '\0', 100);
+    // memcpy(tt, pkt->data+28,  (unsigned int)ntohs(udp_udphdr->len) - 8);   // 8 bytes udp header
+    // printk(KERN_INFO "Content of pkt (length=%zu): %s\n", strlen(tt), tt);
+    // kfree(tt);
     
     /* Write data into the module's cache */
     int try = 0;
-    int write_index = current_index;
-    while (try<MAX_TRY) {
-        if (status[write_index] == 0) {
-            // (14 ethernet already tripped off till this stage) 20 ip, 8 udp
-            memcpy((buff_from_here + write_index*PKT_BUFFER_SIZE), 
+    while (try<MAX_PKT) {
+        if (status[try] == 0) {
+            memcpy((buff_from_here + try*PKT_BUFFER_SIZE), 
                     pkt->data+28, (unsigned int)ntohs(udp_udphdr->len) - 8);
-            status[write_index] = 1;
-            current_index = (write_index + 1) % MAX_PKT;
+            status[try] = 1;
             break;
         }
-        write_index = (write_index + 1) % MAX_PKT;
-        ++try;
+        try += 1;
     }
 
-    count_pkt += 1;
-    printk(KERN_INFO "UDP srcPort [%u], destPort[%u], len[%u], check_sum[%u], payload_byte[%d] - pos[%d]\n",
-        (unsigned int)ntohs(udp_udphdr->source) ,(unsigned int)ntohs(udp_udphdr->dest), 
-        (unsigned int)ntohs(udp_udphdr->len), (unsigned int)ntohs(udp_udphdr->check), 
-        (unsigned int)ntohs(udp_udphdr->len) - 8, write_index);
                                     
     /* Parse TCP header */
     // tcp_header = (struct tcphdr *)skb_transport_header(pkt) ;
@@ -253,6 +244,15 @@ rx_handler_result_t rxhPacketIn(struct sk_buff **ppkt) {
     //       (unsigned int)ntohs(tcp_header->source) ,(unsigned int)ntohs(tcp_header->dest), *tcp_headerflags,
     //       (uint)tcp_header->cwr, (uint)tcp_header->ece,(uint)tcp_header->urg,(uint)tcp_header->ack,(uint)tcp_header->psh,(uint)tcp_header->rst,
     //       (uint)tcp_header->syn,(uint)tcp_header->fin);
+
+
+
+    // int tried = 0;
+    // while(tried<MAX_PKT*5) {
+    //     if (status[current_index]==0) {
+
+    //     }
+    // }
 
     return RX_HANDLER_PASS;
 
@@ -314,9 +314,8 @@ void unregisterRxHandlers(void) {
 static int myinit(void)
 {
     buff_from_here = (unsigned char *) kmalloc(PKT_BUFFER_SIZE*MAX_PKT, GFP_KERNEL);
+    // bzero(buff_from_here, PKT_BUFFER_SIZE*MAX_PKT);
     memset(buff_from_here, '\0', PKT_BUFFER_SIZE*MAX_PKT);
-    buff_temp = (unsigned char *) kmalloc(BUFFER_SIZE, GFP_KERNEL);
-    memset(buff_temp, '\0', BUFFER_SIZE);
 
 	proc_create(filename, 0, NULL, &pops);
 
