@@ -25,7 +25,7 @@ static unsigned long get_nsecs(void)
 int main() {
     int sockfd;
     char buffer[MAXLINE];
-    char *hello = "Hello from client: ";
+    char *hello = "Client 1: ";
     char payload[PAYLOAD_SIZE] = "";
     struct sockaddr_in     servaddr;
 
@@ -50,7 +50,7 @@ int main() {
 
         unsigned long now = get_nsecs();
         memcpy(payload, hello, strlen(hello));
-        int written = sprintf(payload+strlen(hello), "uid[%lu] timestamp[%lu]\n", uid, now);
+        int written = sprintf(payload+strlen(hello), "uid[%lu] sent_at[%lu]", uid, now);
         //payload[strlen(hello)+written] = 0;
         // memcpy(payload+strlen(hello)+written, 0, 1);
         // bzero(payload+strlen(hello)+written, 1);

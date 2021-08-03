@@ -16,6 +16,7 @@
 #include <linux/tcp.h>
 #include <linux/udp.h>
 #include <linux/getcpu.h>
+#include <linux/timekeeping.h>
 
 #include<linux/string.h>
 
@@ -224,14 +225,18 @@ rx_handler_result_t rxhPacketIn(struct sk_buff **ppkt) {
         return RX_HANDLER_PASS;
     }
     
+    u64 now = ktime_get_ns();
     /* Write data into the module's cache */
     int try = 0;
     int write_index = current_index;
+    void *pos = 0;
     while (try<MAX_TRY) {
         if (status[write_index] == 0) {
+            pos = buff_from_here + write_index*PKT_BUFFER_SIZE;
             // (14 ethernet already tripped off till this stage) 20 ip, 8 udp
-            memcpy((buff_from_here + write_index*PKT_BUFFER_SIZE), 
-                    pkt->data+28, (unsigned int)ntohs(udp_udphdr->len) - 8);
+            memcpy(pos, pkt->data+28, (unsigned int)ntohs(udp_udphdr->len) - 8);
+            snprintf(pos + (unsigned int)ntohs(udp_udphdr->len) - 8 -1,
+                     20, " ks[%llu]", now); // u64 max 18446744073709551615 == 20 char
             status[write_index] = 1;
             current_index = (write_index + 1) % MAX_PKT;
             break;
@@ -241,10 +246,10 @@ rx_handler_result_t rxhPacketIn(struct sk_buff **ppkt) {
     }
 
     count_pkt += 1;
-    printk(KERN_INFO "UDP srcPort [%u], destPort[%u], len[%u], check_sum[%u], payload_byte[%d] - pos[%d]\n",
+    printk(KERN_INFO "UDP srcPort [%u], destPort[%u], len[%u], check_sum[%u], payload_byte[%d] - pos[%d] now[%llu]\n",
         (unsigned int)ntohs(udp_udphdr->source) ,(unsigned int)ntohs(udp_udphdr->dest), 
         (unsigned int)ntohs(udp_udphdr->len), (unsigned int)ntohs(udp_udphdr->check), 
-        (unsigned int)ntohs(udp_udphdr->len) - 8, write_index);
+        (unsigned int)ntohs(udp_udphdr->len) - 8, write_index, now);
                                     
     /* Parse TCP header */
     // tcp_header = (struct tcphdr *)skb_transport_header(pkt) ;
@@ -256,14 +261,14 @@ rx_handler_result_t rxhPacketIn(struct sk_buff **ppkt) {
 
     return RX_HANDLER_PASS;
 
-     /* This was derived from linux source code net/core/net.c .
-       Valid return values are RX_HANDLER_CONSUMED, RX_HANDLER_ANOTHER, RX_HANDER_EXACT, RX_HANDLER_PASS.
-       If your intention is to handle the packet here in your module code then you should 
-       return RX_HANDLER_CONSUMED, in which case you are responsible for release of skbuff
-       and should be done via call to kfree_skb(pkt).
-    */
 }
 
+/* This was derived from linux source code net/core/net.c .
+Valid return values are RX_HANDLER_CONSUMED, RX_HANDLER_ANOTHER, RX_HANDER_EXACT, RX_HANDLER_PASS.
+If your intention is to handle the packet here in your module code then you should 
+return RX_HANDLER_CONSUMED, in which case you are responsible for release of skbuff
+and should be done via call to kfree_skb(pkt).
+*/
 int registerRxHandlers(void) {
     struct net_device *device;
     int regerr;
@@ -337,6 +342,7 @@ static void myexit(void)
 	remove_proc_entry(filename, NULL);
 
     kfree(buff_from_here);
+    kfree(buff_temp);
 }
 
 module_init(myinit)

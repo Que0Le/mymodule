@@ -9,6 +9,7 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h> /* sysconf */
+#include <time.h>
 
 #include "lkmc/pagemap.h" /* lkmc_pagemap_virt_to_phys_user */
 
@@ -21,6 +22,14 @@ enum {
 };
 
 char *proc_file = "/proc/intercept_mmap";
+
+static unsigned long get_nsecs(void)
+{
+    struct timespec ts;
+
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec * 1000000000UL + ts.tv_nsec;
+}
 
 int main(int argc, char **argv) {
     int fd;
@@ -60,8 +69,9 @@ int main(int argc, char **argv) {
 
         memset(buf2, '\0', BUFFER_SIZE);
         ssize_t r = pread(fd, buf2, BUFFER_SIZE, 0);
+        uint64_t now = get_nsecs();
         for (int i=0; i<PKTS_PER_BUFFER; i++) {
-            printf("buf2[%zu]    =%s\n", r, buf2+i*PKT_BUFFER_SIZE);
+            printf("buf2[%zu] =%s us[%lu]\n", r, buf2+i*PKT_BUFFER_SIZE, now);
         }
 
         // strncpy(buf2, address1, BUFFER_SIZE);
