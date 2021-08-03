@@ -13,15 +13,7 @@
 
 #include "lkmc/pagemap.h" /* lkmc_pagemap_virt_to_phys_user */
 
-enum { 
-    BUFFER_SIZE = 1024,
-    PKT_BUFFER_SIZE = 128,
-    PKTS_PER_BUFFER = 8,    // = BUFFER_SIZE / PKT_BUFFER_SIZE
-    MAX_PKT = 100,
-    MAX_TRY = 100
-};
-
-char *proc_file = "/proc/intercept_mmap";
+#include "common.h"
 
 static unsigned long get_nsecs(void)
 {
@@ -42,11 +34,14 @@ int main(int argc, char **argv) {
     memset(buf, '\0', BUFFER_SIZE);
     int i=0;
 
-
     page_size = sysconf(_SC_PAGE_SIZE);
-    printf("open pathname = %s\n", proc_file);
 
-    fd = open(proc_file, O_RDWR | O_SYNC);
+    char name_buff[128];
+    memset(name_buff, '\0', 100);
+    memcpy(name_buff, path_prefix, strlen(path_prefix));
+    memcpy(name_buff+strlen(path_prefix), filename, strlen(filename));
+    printf("open pathname = %s\n", name_buff);
+    fd = open(name_buff, O_RDWR | O_SYNC);
     if (fd < 0) {
         perror("open");
         assert(0);
@@ -71,14 +66,25 @@ int main(int argc, char **argv) {
         ssize_t r = pread(fd, buf2, BUFFER_SIZE, 0);
         uint64_t now = get_nsecs();
         for (int i=0; i<PKTS_PER_BUFFER; i++) {
-            printf("buf2[%zu] =%s us[%lu]\n", r, buf2+i*PKT_BUFFER_SIZE, now);
+            if (buf2[i*PKT_BUFFER_SIZE] == '\0')
+                continue;
+            // Extract data from packet
+            // printf("buf2[%zu] =%s us[%lu]\n", r, buf2+i*PKT_BUFFER_SIZE, now);
+            struct Payload pl;
+            memcpy(&pl, buf2+i*PKT_BUFFER_SIZE, sizeof(struct Payload));
+            pl.us_time_arrival_1 = now;
+            printf("-------------------------------------------------------\n");
+            printf("Client_id[%lu] uid[%lu] type[%lu] create_time[%lu] delta[%lu usec]\n",
+                pl.client_uid, pl.uid, pl.type, pl.created_time, (now-pl.ks_time_arrival_2)/1000);
+            printf("             ks_1[%lu] ks_2[%lu] us_1[%lu] us_2[%lu]\n", 
+                pl.ks_time_arrival_1, pl.ks_time_arrival_2,
+                pl.us_time_arrival_1, pl.us_time_arrival_2);
         }
 
         // strncpy(buf2, address1, BUFFER_SIZE);
         // printf("buf2    =%s\n", buf2);
         i += 1;
-        printf("----------------------------------------\n");
-        usleep(500*1000);
+        // usleep(10);
         // break;
     }
     close(fd);

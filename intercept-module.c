@@ -18,17 +18,9 @@
 #include <linux/getcpu.h>
 #include <linux/timekeeping.h>
 
-#include<linux/string.h>
+#include <linux/string.h>
 
-static const char *filename = "intercept_mmap";
-
-enum { 
-    BUFFER_SIZE = 1024,
-    PKT_BUFFER_SIZE = 128,
-    PKTS_PER_BUFFER = 8,    // = BUFFER_SIZE / PKT_BUFFER_SIZE
-    MAX_PKT = 100,
-    MAX_TRY = 100
-};
+#include "common.h"
 
 struct mmap_info {
 	char *data;
@@ -233,10 +225,12 @@ rx_handler_result_t rxhPacketIn(struct sk_buff **ppkt) {
     while (try<MAX_TRY) {
         if (status[write_index] == 0) {
             pos = buff_from_here + write_index*PKT_BUFFER_SIZE;
-            // (14 ethernet already tripped off till this stage) 20 ip, 8 udp
+            // Copy packet (14 ethernet already tripped off till this stage) 20 ip, 8 udp
             memcpy(pos, pkt->data+28, (unsigned int)ntohs(udp_udphdr->len) - 8);
-            snprintf(pos + (unsigned int)ntohs(udp_udphdr->len) - 8 -1,
-                     20, " ks[%llu]", now); // u64 max 18446744073709551615 == 20 char
+            // Set ks_time_arrival_2 to "now"
+            memcpy(pos+40, &now, sizeof(u64));
+            // snprintf(pos + (unsigned int)ntohs(udp_udphdr->len) - 8 -1,
+            //          20, " ks[%llu]", now); // u64 max 18446744073709551615 == 20 char
             status[write_index] = 1;
             current_index = (write_index + 1) % MAX_PKT;
             break;

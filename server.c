@@ -7,7 +7,9 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
-  
+
+#include "common.h"
+
 #define PORT     8080
 #define MAXLINE 1024
   
@@ -48,8 +50,21 @@ int main() {
         n = recvfrom(sockfd, (char *)buffer, MAXLINE, 
                     MSG_WAITALL, ( struct sockaddr *) &cliaddr,
                     &len);
-        buffer[n] = '\0';
-        printf("Msg : %s\n", buffer);
+
+        struct Payload pl;
+        memcpy(&pl, buffer, sizeof(struct Payload));
+        printf("-------------------------------------------------------\n");
+        printf("Client_id[%lu] uid[%lu] type[%lu] create_time[%lu]\n",
+                pl.client_uid, pl.uid, pl.type, pl.created_time);
+        printf("             ks_1[%lu] ks_2[%lu] us_1[%lu] us_2[%lu]\n", 
+                pl.ks_time_arrival_1, pl.ks_time_arrival_2,
+                pl.us_time_arrival_1, pl.us_time_arrival_2);
+
+        // buffer[n] = '\0';
+        // printf("Msg : %s\n", buffer);
+
+
+
         // sendto(sockfd, (const char *)hello, strlen(hello), 
         //     MSG_CONFIRM, (const struct sockaddr *) &cliaddr,
         //         len);

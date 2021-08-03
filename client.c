@@ -9,6 +9,8 @@
 #include <netinet/in.h>
 #include <time.h>
 
+#include "common.h"
+
 #define PORT     8080
 #define MAXLINE 1024
 #define PAYLOAD_SIZE 128
@@ -47,23 +49,30 @@ int main() {
     while(1) {
         /* Prepare payload */
         bzero(payload, PAYLOAD_SIZE);
+        bzero(buffer, PAYLOAD_SIZE);
 
         unsigned long now = get_nsecs();
-        memcpy(payload, hello, strlen(hello));
-        int written = sprintf(payload+strlen(hello), "uid[%lu] sent_at[%lu]", uid, now);
-        //payload[strlen(hello)+written] = 0;
-        // memcpy(payload+strlen(hello)+written, 0, 1);
-        // bzero(payload+strlen(hello)+written, 1);
-        // memcpy(payload+127, "\0", 1);
-
-
-        // int n, len;
-        int len;
-        int sent = sendto(sockfd, (const char *)payload, strlen(payload),
-            MSG_CONFIRM, (const struct sockaddr *) &servaddr, 
-                sizeof(servaddr));
-        printf("Hello message [%lu] sent (%lu of %d bytes): %lu\n", uid, strlen(payload), sent, now);
+        struct Payload pl = {
+            1, uid, PL_DATA, now, 0, 0,0,0
+        };
+        //
+        // memcpy(buffer, &pl, sizeof(struct Payload));
+        int sent = sendto(sockfd, &pl, sizeof(struct Payload),
+            MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
+        printf("Hello message uid[%lu] sent (%d of %zu bytes)\n", uid, sent, sizeof(struct Payload));
         uid += 1;
+        //
+
+        // memcpy(payload, hello, strlen(hello));
+        // int written = sprintf(payload+strlen(hello), "uid[%lu] sent_at[%lu]", uid, now);
+        // int n, len;
+        // int len;
+        // int sent = sendto(sockfd, (const char *)payload, strlen(payload),
+        //     MSG_CONFIRM, (const struct sockaddr *) &servaddr, 
+        //         sizeof(servaddr));
+        // printf("Hello message [%lu] sent (%lu of %d bytes): %lu\n", uid, strlen(payload), sent, now);
+        // uid += 1;
+
         // n = recvfrom(sockfd, (char *)buffer, MAXLINE, 
         //             MSG_WAITALL, (struct sockaddr *) &servaddr,
         //             &len);
