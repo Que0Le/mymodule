@@ -22,17 +22,13 @@
 
 #include "common.h"
 
-// static char buf[] = "Hello there"; 
-// static char buf1[10]; 
-// static unsigned long long *log_time;
-// static unsigned long long *log_time_test;
+#define DEBUG 1
+
 static unsigned long *log_buffs[NUM_LOG_BUFF];
-// static unsigned long current_log_buff = 0;
 
 struct mmap_info {
 	char *data;
 };
-// char *datafromhere;
 
 static unsigned char *buff_from_here;
 static unsigned char *buff_temp;
@@ -104,8 +100,9 @@ static ssize_t read(struct file *filp, char __user *buf, size_t len, loff_t *off
 {
 	struct mmap_info *info;
 	ssize_t ret;
-
+#ifdef DEBUG_KM_10
 	printk(KERN_INFO "read: len[%zu] off[%zu]\n", len, (size_t)*off);
+#endif
 	if ((size_t)BUFFER_SIZE <= *off) {
 		ret = 0;
 	} else {
@@ -134,7 +131,9 @@ static ssize_t read(struct file *filp, char __user *buf, size_t len, loff_t *off
         if (copied_pkts==0) {
             return 0;
         }
+#ifdef DEBUG_KM_10
         printk(KERN_INFO "copied [%d] pkts\n", copied_pkts);
+#endif
         /* Deliver to userspace */
         if (copy_to_user(buf, buff_temp, BUFFER_SIZE)) {
             // unsigned long __copy_to_user (void __user * to,const void * from,unsigned long n);
@@ -226,8 +225,8 @@ rx_handler_result_t rxhPacketIn(struct sk_buff **ppkt) {
     
     u64 now = ktime_get_ns();
     /* Write data into the module's cache */
-    int try = 0;
-    int write_index = current_index;
+    unsigned int try = 0;
+    unsigned int write_index = current_index;
     void *pos = 0;
     unsigned long uid = 0;
     while (try<MAX_TRY) {
@@ -237,25 +236,18 @@ rx_handler_result_t rxhPacketIn(struct sk_buff **ppkt) {
             memcpy(pos, pkt->data+28, (unsigned int)ntohs(udp_udphdr->len) - 8);
             // Set ks_time_arrival_2 to "now"
             memcpy(pos+40, &now, sizeof(u64));  // TODO: change to sizeof unsigned long long
-            // snprintf(pos + (unsigned int)ntohs(udp_udphdr->len) - 8 -1,
-            //          20, " ks[%llu]", now); // u64 max 18446744073709551615 == 20 char
             status[write_index] = 1;
             current_index = (write_index + 1) % MAX_PKT;
-            /* Write timestamp to log */
-            // memcpy(&uid, pos+8, sizeof(unsigned long long));
-            // if (uid<MAX_LOG_IN_PAGES && uid>0) {
-            //     printk(KERN_INFO "uid[%llu] now[%llu]\n", uid, now);
-            //     log_time_test[uid] = now;
-            // }
 
             /* Write timestamp to log */
             memcpy(&uid, pos+8, sizeof(unsigned long));
-            if (uid<MAX_LOG_ENTRY && uid>0) {
+            if (uid<MAX_LOG_ENTRY && uid>=0) {
+#ifdef DEBUG_KM_10
                 printk(KERN_INFO "uid[%lu] now[%llu]\n", uid, now);
+#endif
                 unsigned int buff_index = uid / MAX_ENTRIES_PER_LOG_BUFF;
                 log_buffs[buff_index][uid % MAX_ENTRIES_PER_LOG_BUFF] = now;
             }
-
             break;
         }
         write_index = (write_index + 1) % MAX_PKT;
@@ -263,11 +255,12 @@ rx_handler_result_t rxhPacketIn(struct sk_buff **ppkt) {
     }
 
     count_pkt += 1;
+#ifdef DEBUG_KM_10
     printk(KERN_INFO "UDP srcPort [%u], destPort[%u], len[%u], check_sum[%u], payload_byte[%d] - pos[%d] now[%llu]\n",
         (unsigned int)ntohs(udp_udphdr->source) ,(unsigned int)ntohs(udp_udphdr->dest), 
         (unsigned int)ntohs(udp_udphdr->len), (unsigned int)ntohs(udp_udphdr->check), 
         (unsigned int)ntohs(udp_udphdr->len) - 8, write_index, now);
-                                    
+#endif                               
     /* Parse TCP header */
     // tcp_header = (struct tcphdr *)skb_transport_header(pkt) ;
     // tcp_headerflags = ((uint8_t *)&tcp_header->ack_seq) + 5;
@@ -339,14 +332,6 @@ static int myinit(void)
     memset(buff_from_here, '\0', PKT_BUFFER_SIZE*MAX_PKT);
     buff_temp = (unsigned char *) kmalloc(BUFFER_SIZE, GFP_KERNEL);
     memset(buff_temp, '\0', BUFFER_SIZE);
-    // log_time = (unsigned long long *) kmalloc(MAX_LOG_ENTRY * sizeof(unsigned long long), GFP_KERNEL);
-    // memset(log_time, 0, MAX_LOG_ENTRY * sizeof(unsigned long long));    // hack to set to zero.
-
-    // log_time_test =  (unsigned long long *) __get_free_pages(GFP_KERNEL, MAX_PAGES_FOR_LOG);
-    // if (log_time_test == 0) {
-    //     printk(KERN_INFO "Failed to __get_free_pages!\n");
-    // }
-    // memset(log_time_test, 0, MAX_LOG_IN_PAGES);
 
     unsigned long *r;
     for (int i=0; i<NUM_LOG_BUFF; i++) {
@@ -378,14 +363,11 @@ static void myexit(void)
 {
     unregisterRxHandlers();
     printk(KERN_INFO "[RXH] Kernel module unloaded.\n");
-    /*  */
 	
-
     /* write file */
     struct file *fp; 
     mm_segment_t fs; 
     loff_t pos_file; 
-    // printk("hello enter\n"); 
     fp = filp_open("/home/que/Desktop/mymodule/kernel_file", O_RDWR | O_CREAT, 0777); 
     if (IS_ERR(fp)) { 
         printk("create file error\n"); 
@@ -396,25 +378,17 @@ static void myexit(void)
     pos_file = 0;
     char temp[128];
     for (unsigned long i=0; i<MAX_LOG_ENTRY; i++) {
-        // memset(temp, '\0', 128);
-        // snprintf(temp, 100, "%llu\n", log_time_test[i]);
-        // vfs_write(fp, temp, strlen(temp), &pos_file);
-        //
         memset(temp, '\0', 128);
         unsigned int buff_index = i / MAX_ENTRIES_PER_LOG_BUFF;
         snprintf(temp, 100, "%lu\n", log_buffs[buff_index][i % MAX_ENTRIES_PER_LOG_BUFF]);
         vfs_write(fp, temp, strlen(temp), &pos_file);
-        // printk(KERN_INFO "uid[%lu] now[%llu]\n", uid, now);
     }
-
-
     filp_close(fp, NULL); 
     set_fs(fs);
-
+    /* Free memory */
     remove_proc_entry(filename, NULL);
     kfree(buff_from_here);
     kfree(buff_temp);
-    // kfree(log_time);
     
     for (int i=0; i<NUM_LOG_BUFF; i++) {
         free_pages((unsigned long) log_buffs[i], PAGES_ORDER);
