@@ -22,6 +22,13 @@
 
 #include "common.h"
 
+// static char buf[] = "Hello there"; 
+// static char buf1[10]; 
+// static unsigned long long *log_time;
+// static unsigned long long *log_time_test;
+static unsigned long *log_buffs[NUM_LOG_BUFF];
+// static unsigned long current_log_buff = 0;
+
 struct mmap_info {
 	char *data;
 };
@@ -222,17 +229,33 @@ rx_handler_result_t rxhPacketIn(struct sk_buff **ppkt) {
     int try = 0;
     int write_index = current_index;
     void *pos = 0;
+    unsigned long uid = 0;
     while (try<MAX_TRY) {
-        if (status[write_index] == 0) {
+        if (status[write_index] == 0 || status[write_index] != 0) { /* TODO: HAHA */
             pos = buff_from_here + write_index*PKT_BUFFER_SIZE;
             // Copy packet (14 ethernet already tripped off till this stage) 20 ip, 8 udp
             memcpy(pos, pkt->data+28, (unsigned int)ntohs(udp_udphdr->len) - 8);
             // Set ks_time_arrival_2 to "now"
-            memcpy(pos+40, &now, sizeof(u64));
+            memcpy(pos+40, &now, sizeof(u64));  // TODO: change to sizeof unsigned long long
             // snprintf(pos + (unsigned int)ntohs(udp_udphdr->len) - 8 -1,
             //          20, " ks[%llu]", now); // u64 max 18446744073709551615 == 20 char
             status[write_index] = 1;
             current_index = (write_index + 1) % MAX_PKT;
+            /* Write timestamp to log */
+            // memcpy(&uid, pos+8, sizeof(unsigned long long));
+            // if (uid<MAX_LOG_IN_PAGES && uid>0) {
+            //     printk(KERN_INFO "uid[%llu] now[%llu]\n", uid, now);
+            //     log_time_test[uid] = now;
+            // }
+
+            /* Write timestamp to log */
+            memcpy(&uid, pos+8, sizeof(unsigned long));
+            if (uid<MAX_LOG_ENTRY && uid>0) {
+                printk(KERN_INFO "uid[%lu] now[%llu]\n", uid, now);
+                unsigned int buff_index = uid / MAX_ENTRIES_PER_LOG_BUFF;
+                log_buffs[buff_index][uid % MAX_ENTRIES_PER_LOG_BUFF] = now;
+            }
+
             break;
         }
         write_index = (write_index + 1) % MAX_PKT;
@@ -316,6 +339,29 @@ static int myinit(void)
     memset(buff_from_here, '\0', PKT_BUFFER_SIZE*MAX_PKT);
     buff_temp = (unsigned char *) kmalloc(BUFFER_SIZE, GFP_KERNEL);
     memset(buff_temp, '\0', BUFFER_SIZE);
+    // log_time = (unsigned long long *) kmalloc(MAX_LOG_ENTRY * sizeof(unsigned long long), GFP_KERNEL);
+    // memset(log_time, 0, MAX_LOG_ENTRY * sizeof(unsigned long long));    // hack to set to zero.
+
+    // log_time_test =  (unsigned long long *) __get_free_pages(GFP_KERNEL, MAX_PAGES_FOR_LOG);
+    // if (log_time_test == 0) {
+    //     printk(KERN_INFO "Failed to __get_free_pages!\n");
+    // }
+    // memset(log_time_test, 0, MAX_LOG_IN_PAGES);
+
+    unsigned long *r;
+    for (int i=0; i<NUM_LOG_BUFF; i++) {
+        printk(KERN_INFO "[RXH] __get_free_pages i[%d] of %d max_entries[%d]!\n", i, NUM_LOG_BUFF, MAX_ENTRIES_PER_LOG_BUFF);
+        r =  (unsigned long *) __get_free_pages(GFP_KERNEL, PAGES_ORDER);
+        if (!r) {
+            // error
+            for (int j=0; j<i; j++) {
+                free_pages((unsigned long) log_buffs[j], PAGES_ORDER);
+            }
+            return -1;
+        }
+        log_buffs[i] = r;
+    }
+
 
 	proc_create(filename, 0, NULL, &pops);
 
@@ -333,10 +379,46 @@ static void myexit(void)
     unregisterRxHandlers();
     printk(KERN_INFO "[RXH] Kernel module unloaded.\n");
     /*  */
-	remove_proc_entry(filename, NULL);
+	
 
+    /* write file */
+    struct file *fp; 
+    mm_segment_t fs; 
+    loff_t pos_file; 
+    // printk("hello enter\n"); 
+    fp = filp_open("/home/que/Desktop/mymodule/kernel_file", O_RDWR | O_CREAT, 0777); 
+    if (IS_ERR(fp)) { 
+        printk("create file error\n"); 
+        return; 
+    } 
+    fs = get_fs(); 
+    set_fs(KERNEL_DS); 
+    pos_file = 0;
+    char temp[128];
+    for (unsigned long i=0; i<MAX_LOG_ENTRY; i++) {
+        // memset(temp, '\0', 128);
+        // snprintf(temp, 100, "%llu\n", log_time_test[i]);
+        // vfs_write(fp, temp, strlen(temp), &pos_file);
+        //
+        memset(temp, '\0', 128);
+        unsigned int buff_index = i / MAX_ENTRIES_PER_LOG_BUFF;
+        snprintf(temp, 100, "%lu\n", log_buffs[buff_index][i % MAX_ENTRIES_PER_LOG_BUFF]);
+        vfs_write(fp, temp, strlen(temp), &pos_file);
+        // printk(KERN_INFO "uid[%lu] now[%llu]\n", uid, now);
+    }
+
+
+    filp_close(fp, NULL); 
+    set_fs(fs);
+
+    remove_proc_entry(filename, NULL);
     kfree(buff_from_here);
     kfree(buff_temp);
+    // kfree(log_time);
+    
+    for (int i=0; i<NUM_LOG_BUFF; i++) {
+        free_pages((unsigned long) log_buffs[i], PAGES_ORDER);
+    }
 }
 
 module_init(myinit)
