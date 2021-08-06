@@ -240,7 +240,7 @@ rx_handler_result_t rxhPacketIn(struct sk_buff **ppkt) {
             /* Write timestamp to log */
             memcpy(&uid, pos+8, sizeof(unsigned long));
             if (uid<MAX_LOG_ENTRY && uid>=0) {
-#ifdef DEBUG_INCOMING_PACKETS
+#ifdef DEBUG_KM_INCOMING_PACKETS
                 printk(KERN_INFO "uid[%lu] now[%llu]\n", uid, now);
 #endif
                 unsigned int buff_index = uid / MAX_ENTRIES_PER_LOG_BUFF;
@@ -258,7 +258,7 @@ rx_handler_result_t rxhPacketIn(struct sk_buff **ppkt) {
     }
 
     count_pkt += 1;
-#ifdef DEBUG_INCOMING_PACKETS
+#ifdef DEBUG_KM_INCOMING_PACKETS
     printk(KERN_INFO "UDP srcPort [%u], destPort[%u], len[%u], check_sum[%u], payload_byte[%d] - pos[%d] now[%llu]\n",
         (unsigned int)ntohs(udp_udphdr->source) ,(unsigned int)ntohs(udp_udphdr->dest), 
         (unsigned int)ntohs(udp_udphdr->len), (unsigned int)ntohs(udp_udphdr->check), 
@@ -350,6 +350,8 @@ static int myinit(void)
         }
         log_buffs[i] = r;
     }
+    printk(KERN_INFO "[RXH] Allocated NUM_LOG_BUFF[%d] for MAX_LOG_ENTRY[%d] packets!\n", 
+                NUM_LOG_BUFF, MAX_LOG_ENTRY);
     /* Create proc file */
 	proc_create(proc_filename, 0, NULL, &pops);
     /*  */

@@ -45,7 +45,8 @@ int main() {
     servaddr.sin_addr.s_addr = inet_addr("192.168.1.25");
     //servaddr.sin_addr.s_addr = INADDR_ANY;
     unsigned long uid = 0;
-
+    unsigned long begin_sent = get_nsecs();
+    
     while(1) {
         /* Prepare payload */
         bzero(buffer, PAYLOAD_SIZE);
@@ -58,7 +59,9 @@ int main() {
         // memcpy(buffer, &pl, sizeof(struct Payload));
         int sent = sendto(sockfd, &pl, sizeof(struct Payload),
             MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
-        printf("Hello message uid[%lu] sent (%d of %zu bytes)\n", uid, sent, sizeof(struct Payload));
+        if (uid % 1000 == 0) {
+            printf("Hello message uid[%lu] sent (%d of %zu bytes)\n", uid, sent, sizeof(struct Payload));
+        }
         uid += 1;
         //
 

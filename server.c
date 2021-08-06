@@ -72,8 +72,12 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    signal(SIGINT, sig_handler);
-    printf("Server listening ...\n");
+    signal(SIGTSTP, sig_handler);
+    //Ctrl+C - SIGINT
+    //Ctrl+\ - SIGQUIT
+    //Ctrl+Z - SIGTSTP
+
+    printf("Server listening ... Ctrl+Z to break while(). Ctrl+C to terminate the program.\n");
     while(keep_running) {
         int len, n;
         bzero(buffer, MAXLINE);
@@ -88,12 +92,14 @@ int main() {
         if (pl.uid <MAX_LOG_ENTRY && pl.uid >= 0) {
             log_time_stamps[pl.uid] = now;
         }
-        // printf("-------------------------------------------------------\n");
-        // printf("Client_id[%lu] uid[%lu] type[%lu] create_time[%lu]\n",
-        //         pl.client_uid, pl.uid, pl.type, pl.created_time);
-        // printf("             ks_1[%lu] ks_2[%lu] us_1[%lu] us_2[%lu]\n", 
-        //         pl.ks_time_arrival_1, pl.ks_time_arrival_2,
-        //         pl.us_time_arrival_1, pl.us_time_arrival_2);
+#ifdef DEBUG_US_INCOMING_PACKETS
+        printf("-------------------------------------------------------\n");
+        printf("Client_id[%lu] uid[%lu] type[%lu] create_time[%lu]\n",
+                pl.client_uid, pl.uid, pl.type, pl.created_time);
+        printf("             ks_1[%lu] ks_2[%lu] us_1[%lu] us_2[%lu]\n", 
+                pl.ks_time_arrival_1, pl.ks_time_arrival_2,
+                pl.us_time_arrival_1, pl.us_time_arrival_2);
+#endif
     }
 
     /* Export log to text file */

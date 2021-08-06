@@ -1,5 +1,7 @@
 #define DEBUG_KM_10
-// #define DEBUG_INCOMING_PACKETS
+// #define DEBUG_KM_INCOMING_PACKETS
+// #define DEBUG_UP_INCOMING_PACKETS
+// #define DEBUG_US_INCOMING_PACKETS
 // #define DEBUG_READ_FROM_US
 
 const char *path_prefix = "/proc/";
@@ -21,10 +23,13 @@ enum {
     MAX_ENTRIES_PER_LOG_BUFF = (2 << (PAGES_ORDER-1))*SIZE_OF_PAGE_HC/8,    //32768
     NUM_LOG_BUFF = 32 */
 
-    MAX_LOG_ENTRY = 65536,            // 2^20 ~ 1M entries
-    PAGES_ORDER = 6,                    // PAGES_PER_LOG_BUFF = 2^PAGES_ORDER = 64 pages
-    MAX_ENTRIES_PER_LOG_BUFF = (2 << (PAGES_ORDER-1))*SIZE_OF_PAGE_HC/8,    //32768
-    NUM_LOG_BUFF = 8
+    /* SHIFT x == 2^(x+1) 15=65.536 16=131.072 17=262.144 18=524.288 19=1.048.576 */
+    MAX_LOG_ENTRY = 2 << 17,
+    /* PAGES_PER_LOG_BUFF = 2^PAGES_ORDER = 64 pages */
+    PAGES_ORDER = 6,
+    /* 64pages * 4KB/page = 2^18B (262144B) = 32768 unsigned long */
+    MAX_ENTRIES_PER_LOG_BUFF = (2 << (PAGES_ORDER-1))*SIZE_OF_PAGE_HC/8,
+    NUM_LOG_BUFF = MAX_LOG_ENTRY / MAX_ENTRIES_PER_LOG_BUFF
 };
 
 enum  {

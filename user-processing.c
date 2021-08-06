@@ -90,12 +90,14 @@ int main(int argc, char **argv) {
             struct Payload pl;
             memcpy(&pl, buf2+i*PKT_BUFFER_SIZE, sizeof(struct Payload));
             pl.us_time_arrival_1 = now;
+#ifdef DEBUG_UP_INCOMING_PACKETS
             printf("-------------------------------------------------------\n");
             printf("Client_id[%lu] uid[%lu] type[%lu] create_time[%lu] delta[%lu usec]\n",
                 pl.client_uid, pl.uid, pl.type, pl.created_time, (now-pl.ks_time_arrival_2)/1000);
             printf("             ks_1[%lu] ks_2[%lu] us_1[%lu] us_2[%lu]\n", 
                 pl.ks_time_arrival_1, pl.ks_time_arrival_2,
                 pl.us_time_arrival_1, pl.us_time_arrival_2);
+#endif
             // Add timestamp to log at uid
             if (pl.uid <MAX_LOG_ENTRY && pl.uid >= 0) {
                 log_time_stamps[pl.uid] = now;
@@ -107,11 +109,11 @@ int main(int argc, char **argv) {
         // usleep(10);
         // break;
     }
-    printf("\nExporting log file ...\n");   // enter new line to avoid the Ctrl+C (^C) char
     // for (int i=0; i<100; i++)
     //     printf("uid[%d] time[%lu]\n", i, log_time_stamps[i]);
 
     /* Export log to text file */
+    printf("\nExporting log file ...\n");   // enter new line to avoid the Ctrl+C (^C) char
     FILE *fp;
     char buf[128];
     fp = fopen(path_log_export_up, "w");
