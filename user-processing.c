@@ -14,6 +14,15 @@
 #include "lkmc/pagemap.h" /* lkmc_pagemap_virt_to_phys_user */
 
 #include "common.h"
+#include <signal.h>
+
+static volatile sig_atomic_t keep_running = 1;
+
+static void sig_handler(int _)
+{
+    (void)_;
+    keep_running = 0;
+}
 
 static unsigned long get_nsecs(void)
 {
@@ -27,19 +36,28 @@ int main(int argc, char **argv) {
     int fd;
     long page_size;
     char *address1, *address2;
-    char buf[BUFFER_SIZE];
     char buf2[BUFFER_SIZE];
     uintptr_t paddr;
 
-    memset(buf, '\0', BUFFER_SIZE);
-    int i=0;
+    /* Allocate mem for log */
+    unsigned long *log_time_stamps = (unsigned long *) malloc(MAX_LOG_ENTRY*8);
+    if (!log_time_stamps) {
+        printf("Malloc log_time_stamps failed\n!");
+        return -1;
+    }
+    memset(log_time_stamps, 0, MAX_LOG_ENTRY*8);
+    for (int i=0; i<MAX_LOG_ENTRY; i++) {
+        if (log_time_stamps[i] != 0) {
+            printf("memset log_time_stamps failed\n!");
+            return -1;
+        }
+    }
 
-    page_size = sysconf(_SC_PAGE_SIZE);
-
+    /* Open proc file */
     char name_buff[128];
     memset(name_buff, '\0', 100);
     memcpy(name_buff, path_prefix, strlen(path_prefix));
-    memcpy(name_buff+strlen(path_prefix), filename, strlen(filename));
+    memcpy(name_buff+strlen(path_prefix), proc_filename, strlen(proc_filename));
     printf("open pathname = %s\n", name_buff);
     fd = open(name_buff, O_RDWR | O_SYNC);
     if (fd < 0) {
@@ -47,17 +65,16 @@ int main(int argc, char **argv) {
         assert(0);
     }
     printf("fd = %d\n", fd);
-
-    /* mmap twice for double fun. */
-    // puts("mmap 1");
+    /* Map mem */
+    page_size = sysconf(_SC_PAGE_SIZE);
     address1 = mmap(NULL, page_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if (address1 == MAP_FAILED) {
         perror("mmap");
         assert(0);
     }
 
-    while(1) {
-        i = i % 8;
+    signal(SIGINT, sig_handler);
+    while(keep_running) {
         // memset(buf, '\0', BUFFER_SIZE);
         // read(fd, buf, BUFFER_SIZE);
         // printf("buf     =%s\n", buf);
@@ -79,14 +96,32 @@ int main(int argc, char **argv) {
             printf("             ks_1[%lu] ks_2[%lu] us_1[%lu] us_2[%lu]\n", 
                 pl.ks_time_arrival_1, pl.ks_time_arrival_2,
                 pl.us_time_arrival_1, pl.us_time_arrival_2);
+            // Add timestamp to log at uid
+            if (pl.uid <MAX_LOG_ENTRY && pl.uid >= 0) {
+                log_time_stamps[pl.uid] = now;
+            }
         }
 
         // strncpy(buf2, address1, BUFFER_SIZE);
         // printf("buf2    =%s\n", buf2);
-        i += 1;
         // usleep(10);
         // break;
     }
+    printf("\nExporting log file ...\n");   // enter new line to avoid the Ctrl+C (^C) char
+    // for (int i=0; i<100; i++)
+    //     printf("uid[%d] time[%lu]\n", i, log_time_stamps[i]);
+
+    /* Export log to text file */
+    FILE *fp;
+    char buf[128];
+    fp = fopen(path_log_export_up, "w");
+    for (unsigned long i=0; i<MAX_LOG_ENTRY; i++) {
+        memset(buf, '\0', 128);
+        snprintf(buf, 100, "%lu\n", log_time_stamps[i]);
+        fprintf(fp, buf);
+    }
+    fclose(fp);
+
     close(fd);
 
 

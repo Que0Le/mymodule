@@ -29,3 +29,21 @@ sudo insmod intercept-module.ko
 gcc -Wall user-processing.c -o user
 sudo ./user
 ```
+
+```bash
+du -h /var/log/
+# Clear journal log
+journalctl --disk-usage
+sudo journalctl --vacuum-size=500M
+sudo -- sh -c "cat /dev/null >  /var/log/kern.log"
+sudo rm /var/log/syslog.1
+```
+
+Change sublime text to default editor:
+```bash
+# https://askubuntu.com/a/397387
+subl /usr/share/applications/defaults.list
+# Search for all instances of gedit (org.gnome.gedit on some systems) 
+# and replace them with sublime_text. 
+# Save the file, log out and back in, and you should be all set.
+```

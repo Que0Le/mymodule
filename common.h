@@ -1,7 +1,12 @@
 #define DEBUG_KM_10
+// #define DEBUG_INCOMING_PACKETS
+// #define DEBUG_READ_FROM_US
 
 const char *path_prefix = "/proc/";
-const char *filename = "intercept_mmap";
+const char *proc_filename = "intercept_mmap";
+const char *path_log_export_km = "/home/que/Desktop/mymodule/logs/km_log_kernel_time.txt";
+const char *path_log_export_up = "/home/que/Desktop/mymodule/logs/user_processing_log_pull_time.txt";
+const char *path_log_export_us = "/home/que/Desktop/mymodule/logs/server_log_arrival_time.txt";
 
 enum { 
     BUFFER_SIZE = 1024,
@@ -11,10 +16,15 @@ enum {
     MAX_PKT = 100,
     MAX_TRY = 100,
     // 2^20(order)*8/4096(size page)
-    MAX_LOG_ENTRY = 1048576,            // 2^20 ~ 1M entries
-    PAGES_ORDER = 6,                    //PAGES_PER_LOG_BUFF = 2^PAGES_ORDER
+    /* MAX_LOG_ENTRY = 1048576,            // 2^20 ~ 1M entries
+    PAGES_ORDER = 6,                    // PAGES_PER_LOG_BUFF = 2^PAGES_ORDER = 64 pages
     MAX_ENTRIES_PER_LOG_BUFF = (2 << (PAGES_ORDER-1))*SIZE_OF_PAGE_HC/8,    //32768
-    NUM_LOG_BUFF = 32
+    NUM_LOG_BUFF = 32 */
+
+    MAX_LOG_ENTRY = 65536,            // 2^20 ~ 1M entries
+    PAGES_ORDER = 6,                    // PAGES_PER_LOG_BUFF = 2^PAGES_ORDER = 64 pages
+    MAX_ENTRIES_PER_LOG_BUFF = (2 << (PAGES_ORDER-1))*SIZE_OF_PAGE_HC/8,    //32768
+    NUM_LOG_BUFF = 8
 };
 
 enum  {
@@ -33,3 +43,19 @@ struct Payload {
     unsigned long us_time_arrival_1;    //nsec
     unsigned long us_time_arrival_2;    //nsec
 };
+
+/* //TODO: Better debug
+#ifdef DEBUG
+#if (DEBUG > 0) && (DEBUG < 2)
+printf("Debugging level 1");
+#endif
+
+#if (DEBUG > 1) && (DEBUG < 3)
+printf("Debugging level 2");
+#endif
+
+#if (DEBUG > n-1) && (DEBUG < n)
+printf("Debugging level n");
+#endif
+#endif
+*/

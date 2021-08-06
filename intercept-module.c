@@ -22,8 +22,6 @@
 
 #include "common.h"
 
-#define DEBUG 1
-
 static unsigned long *log_buffs[NUM_LOG_BUFF];
 
 struct mmap_info {
@@ -35,7 +33,7 @@ static unsigned char *buff_temp;
 unsigned int current_index = 0; // index of (should be) next free cell
 int status[MAX_PKT] = {0};
 
-unsigned int count_pkt = 0;
+unsigned long count_pkt = 0;
 
 /* After unmap. */
 static void vm_close(struct vm_area_struct *vma)
@@ -100,7 +98,7 @@ static ssize_t read(struct file *filp, char __user *buf, size_t len, loff_t *off
 {
 	struct mmap_info *info;
 	ssize_t ret;
-#ifdef DEBUG_KM_10
+#ifdef DEBUG_READ_FROM_US
 	printk(KERN_INFO "read: len[%zu] off[%zu]\n", len, (size_t)*off);
 #endif
 	if ((size_t)BUFFER_SIZE <= *off) {
@@ -131,7 +129,7 @@ static ssize_t read(struct file *filp, char __user *buf, size_t len, loff_t *off
         if (copied_pkts==0) {
             return 0;
         }
-#ifdef DEBUG_KM_10
+#ifdef DEBUG_READ_FROM_US
         printk(KERN_INFO "copied [%d] pkts\n", copied_pkts);
 #endif
         /* Deliver to userspace */
@@ -230,7 +228,7 @@ rx_handler_result_t rxhPacketIn(struct sk_buff **ppkt) {
     void *pos = 0;
     unsigned long uid = 0;
     while (try<MAX_TRY) {
-        if (status[write_index] == 0 || status[write_index] != 0) { /* TODO: HAHA */
+        if (status[write_index] == 0/*  || status[write_index] != 0 */) { /* TODO: HAHA */
             pos = buff_from_here + write_index*PKT_BUFFER_SIZE;
             // Copy packet (14 ethernet already tripped off till this stage) 20 ip, 8 udp
             memcpy(pos, pkt->data+28, (unsigned int)ntohs(udp_udphdr->len) - 8);
@@ -242,7 +240,7 @@ rx_handler_result_t rxhPacketIn(struct sk_buff **ppkt) {
             /* Write timestamp to log */
             memcpy(&uid, pos+8, sizeof(unsigned long));
             if (uid<MAX_LOG_ENTRY && uid>=0) {
-#ifdef DEBUG_KM_10
+#ifdef DEBUG_INCOMING_PACKETS
                 printk(KERN_INFO "uid[%lu] now[%llu]\n", uid, now);
 #endif
                 unsigned int buff_index = uid / MAX_ENTRIES_PER_LOG_BUFF;
@@ -252,10 +250,15 @@ rx_handler_result_t rxhPacketIn(struct sk_buff **ppkt) {
         }
         write_index = (write_index + 1) % MAX_PKT;
         ++try;
+        if (try == MAX_TRY) {
+            memcpy(&uid, pkt->data+28+8, sizeof(unsigned long));
+            printk(KERN_INFO "Packet uid[%lu] cannot be written in cache: No free slot!", uid);
+        }
+
     }
 
     count_pkt += 1;
-#ifdef DEBUG_KM_10
+#ifdef DEBUG_INCOMING_PACKETS
     printk(KERN_INFO "UDP srcPort [%u], destPort[%u], len[%u], check_sum[%u], payload_byte[%d] - pos[%d] now[%llu]\n",
         (unsigned int)ntohs(udp_udphdr->source) ,(unsigned int)ntohs(udp_udphdr->dest), 
         (unsigned int)ntohs(udp_udphdr->len), (unsigned int)ntohs(udp_udphdr->check), 
@@ -333,12 +336,13 @@ static int myinit(void)
     buff_temp = (unsigned char *) kmalloc(BUFFER_SIZE, GFP_KERNEL);
     memset(buff_temp, '\0', BUFFER_SIZE);
 
+    /* Alloc memory for log buffers */
     unsigned long *r;
     for (int i=0; i<NUM_LOG_BUFF; i++) {
-        printk(KERN_INFO "[RXH] __get_free_pages i[%d] of %d max_entries[%d]!\n", i, NUM_LOG_BUFF, MAX_ENTRIES_PER_LOG_BUFF);
         r =  (unsigned long *) __get_free_pages(GFP_KERNEL, PAGES_ORDER);
         if (!r) {
             // error
+            printk(KERN_INFO "[RXH] ERROR: __get_free_pages i[%d] of %d max_entries[%d]!\n", i, NUM_LOG_BUFF, MAX_ENTRIES_PER_LOG_BUFF);
             for (int j=0; j<i; j++) {
                 free_pages((unsigned long) log_buffs[j], PAGES_ORDER);
             }
@@ -346,10 +350,8 @@ static int myinit(void)
         }
         log_buffs[i] = r;
     }
-
-
-	proc_create(filename, 0, NULL, &pops);
-
+    /* Create proc file */
+	proc_create(proc_filename, 0, NULL, &pops);
     /*  */
     int i = 0;
     printk(KERN_INFO "[RXH] Kernel module loaded!\n");
@@ -364,11 +366,12 @@ static void myexit(void)
     unregisterRxHandlers();
     printk(KERN_INFO "[RXH] Kernel module unloaded.\n");
 	
-    /* write file */
+    /* write log buffers in file */
+    printk(KERN_INFO "[RXH] Kernel module exporting log. Total count_pkts[%lu] ...\n", count_pkt);
     struct file *fp; 
     mm_segment_t fs; 
     loff_t pos_file; 
-    fp = filp_open("/home/que/Desktop/mymodule/kernel_file", O_RDWR | O_CREAT, 0777); 
+    fp = filp_open(path_log_export_km, O_RDWR | O_CREAT, 0777); 
     if (IS_ERR(fp)) { 
         printk("create file error\n"); 
         return; 
@@ -385,8 +388,9 @@ static void myexit(void)
     }
     filp_close(fp, NULL); 
     set_fs(fs);
+
     /* Free memory */
-    remove_proc_entry(filename, NULL);
+    remove_proc_entry(proc_filename, NULL);
     kfree(buff_from_here);
     kfree(buff_temp);
     
