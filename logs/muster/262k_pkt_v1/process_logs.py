@@ -112,11 +112,10 @@ rects3 = ax.bar(
 if v==1000:
     ax.set_ylabel('Number of packets')
     ax.set_xlabel('Diff in nsec (*1000)')
-    ax.set_title('Number of packets received softed in latency. Total: ' + str(len(km_log)))
+    ax.set_title('Number of packets received with latency')
 elif v==1:
     ax.set_ylabel('Number of packets')
-    ax.set_xlabel('Diff in usec')
-    ax.set_title('Number of packets received softed in latency. Total: ' + str(len(km_log)))
+    ax.set_title('Diff in usec')
 
 ax.set_xticks(x)
 ax.set_xticklabels(labels)

@@ -15,20 +15,18 @@
 #define MAXLINE 1024
 #define PAYLOAD_SIZE 128
 
-// static unsigned long get_nsecs(void)
-// {
-//     struct timespec ts;
+static unsigned long get_nsecs(void)
+{
+    struct timespec ts;
 
-//     clock_gettime(CLOCK_MONOTONIC, &ts);
-//     return ts.tv_sec * 1000000000UL + ts.tv_nsec;
-// }
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec * 1000000000UL + ts.tv_nsec;
+}
 
 // Driver code
 int main() {
     int sockfd;
     char buffer[MAXLINE];
-    // char *hello = "Client 1: ";
-    // char payload[PAYLOAD_SIZE] = "";
     struct sockaddr_in     servaddr;
 
     // Creating socket file descriptor
@@ -46,7 +44,7 @@ int main() {
     //servaddr.sin_addr.s_addr = INADDR_ANY;
     unsigned long uid = 0;
     unsigned long begin_sent = get_nsecs();
-    
+
     while(1) {
         /* Prepare payload */
         bzero(buffer, PAYLOAD_SIZE);
@@ -60,7 +58,8 @@ int main() {
         int sent = sendto(sockfd, &pl, sizeof(struct Payload),
             MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
         if (uid % 1000 == 0) {
-            printf("Hello message uid[%lu] sent (%d of %zu bytes)\n", uid, sent, sizeof(struct Payload));
+            printf("Hello message uid[%lu] of MAX_LOG_ENTRY[%d] sent (%d of %zu bytes)\n", 
+                uid, MAX_LOG_ENTRY, sent, sizeof(struct Payload));
         }
         uid += 1;
         //

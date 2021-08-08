@@ -17,12 +17,6 @@ enum {
     SIZE_OF_PAGE_HC = 4096,             // hardcode
     MAX_PKT = 100,
     MAX_TRY = 100,
-    // 2^20(order)*8/4096(size page)
-    /* MAX_LOG_ENTRY = 1048576,            // 2^20 ~ 1M entries
-    PAGES_ORDER = 6,                    // PAGES_PER_LOG_BUFF = 2^PAGES_ORDER = 64 pages
-    MAX_ENTRIES_PER_LOG_BUFF = (2 << (PAGES_ORDER-1))*SIZE_OF_PAGE_HC/8,    //32768
-    NUM_LOG_BUFF = 32 */
-
     /* SHIFT x == 2^(x+1) 15=65.536 16=131.072 17=262.144 18=524.288 19=1.048.576 */
     MAX_LOG_ENTRY = 2 << 17,
     /* PAGES_PER_LOG_BUFF = 2^PAGES_ORDER = 64 pages */
