@@ -5,13 +5,13 @@ import numpy as np
 
 header_common_path = 'common.h'
 # TODO: read c header file for these info.
-km_log_path = "/home/que/Desktop/mymodule/logs/km_log_kernel_time.txt"
-up_log_path = "/home/que/Desktop/mymodule/logs/user_processing_log_pull_time.txt"
-us_log_path = "/home/que/Desktop/mymodule/logs/server_log_arrival_time.txt"
+path_log_export_km = "/home/que/Desktop/mymodule/logs/km_log_kernel_time.txt"
+path_log_export_up = "/home/que/Desktop/mymodule/logs/user_processing_log_pull_time.txt"
+path_log_export_us = "/home/que/Desktop/mymodule/logs/server_log_arrival_time.txt"
 
-if (not os.path.isfile(km_log_path)) or \
-    (not os.path.isfile(up_log_path)) or \
-    (not os.path.isfile(us_log_path)):
+if (not os.path.isfile(path_log_export_km)) or \
+    (not os.path.isfile(path_log_export_up)) or \
+    (not os.path.isfile(path_log_export_us)):
     print("file(s) not existed! Exit now ...")
     exit()
 
@@ -55,13 +55,13 @@ km_log = []
 up_log = []
 us_log = []
 
-with open(km_log_path) as km_log_f:
+with open(path_log_export_km) as km_log_f:
     for line in km_log_f:
         km_log.append(int(line))
-with open(up_log_path) as up_log_f:
+with open(path_log_export_up) as up_log_f:
     for line in up_log_f:
         up_log.append(int(line))
-with open(us_log_path) as us_log_f:
+with open(path_log_export_us) as us_log_f:
     for line in us_log_f:
         us_log.append(int(line))
 

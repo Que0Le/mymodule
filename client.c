@@ -79,7 +79,7 @@ int main() {
         //             &len);
         // buffer[n] = '\0';
         // printf("Server : %s\n", buffer);
-        usleep(100);
+        usleep(1000);
     }
 
     close(sockfd);
