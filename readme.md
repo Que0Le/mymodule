@@ -82,9 +82,11 @@ sudo apt install python3-tk
 # Compile (not work now. Use makefile)
 #clang -O2 -Wall -target bpf -c xdp_measure_user.c -o xdp_measure_user.o
 # Insert xdp kern program
-sudo ip link set dev eth0 xdp obj xdp_measure_kern.o
+sudo ip link set dev ens33 xdp obj xdp_measure_kern.o
 # or 
-ip -force link set dev eth0 xdp obj xdp_measure_kern.o
+ip -force link set dev ens33 xdp obj xdp_measure_kern.o
+# force remove xdp program
+sudo ip link set dev ens33 xdp off
 
 sudo ./xdp_measure_user -d ens33 --filename xdp_measure_kern.o
 ```

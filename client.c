@@ -57,7 +57,7 @@ int main() {
         // memcpy(buffer, &pl, sizeof(struct Payload));
         int sent = sendto(sockfd, &pl, sizeof(struct Payload),
             MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
-        if (uid % 1000 == 0) {
+        if (uid % 10 == 0) {
             printf("Hello message uid[%lu] of MAX_LOG_ENTRY[%d] sent (%d of %zu bytes)\n", 
                 uid, MAX_LOG_ENTRY, sent, sizeof(struct Payload));
         }
@@ -79,7 +79,7 @@ int main() {
         //             &len);
         // buffer[n] = '\0';
         // printf("Server : %s\n", buffer);
-        usleep(1000);
+        usleep(1000*50);
     }
 
     close(sockfd);

@@ -16,6 +16,7 @@
 
 #include <string.h>
 #include "/home/que/Desktop/mymodule/common.h"
+#include <errno.h>
 
 struct bpf_map_def SEC("maps") xsks_map = {
 	.type = BPF_MAP_TYPE_XSKMAP,
@@ -31,23 +32,19 @@ struct bpf_map_def SEC("maps") uid_timestamps = {
 	.max_entries = 1 + MAX_LOG_ENTRY, 
 };
 
+struct bpf_map_def SEC("maps") pkt_payload = {
+	.type = BPF_MAP_TYPE_ARRAY,
+	.key_size = sizeof(unsigned int),
+	.value_size = sizeof(struct Payload),
+	.max_entries = 1 + MAX_LOG_ENTRY, 
+};
+
 struct bpf_map_def SEC("maps") xdp_stats_map = {
 	.type        = BPF_MAP_TYPE_PERCPU_ARRAY,
 	.key_size    = sizeof(int),
 	.value_size  = sizeof(__u32),
 	.max_entries = 64,
 };
-
-// struct Payload {
-//     unsigned long client_uid;
-//     unsigned long uid;
-//     unsigned long type;
-//     unsigned long created_time;         //nsec
-//     unsigned long ks_time_arrival_1;    //nsec
-//     unsigned long ks_time_arrival_2;    //nsec
-//     unsigned long us_time_arrival_1;    //nsec
-//     unsigned long us_time_arrival_2;    //nsec
-// };
 
 SEC("xdp_sock")
 int xdp_sock_prog(struct xdp_md *ctx)
@@ -57,28 +54,54 @@ int xdp_sock_prog(struct xdp_md *ctx)
     __u32 *pkt_count;
     void *data_end = (void *)(long)ctx->data_end;
 	void *data = (void *)(long)ctx->data;
-
-    // bpf_printk("test: %d\n", data_end-data);
-    if ((data + 106) == data_end) {
-        if (data+sizeof(struct Payload) <= data_end) {
+    
+    if (data_end >= data + 106) {
+        if (data_end >= data+42+sizeof(struct Payload)) {
+            // bpf_printk("test: %d\n", data_end-data);
             struct Payload *pl;
             pl = data+42;
-            // bpf_printk("!!now[%lu] uid from packet: %lu\n", now, pl->uid);
-            unsigned long *value = bpf_map_lookup_elem(&uid_timestamps, &pl->uid);
-            if (value) {
+            unsigned long *time_in_map = bpf_map_lookup_elem(&uid_timestamps, &pl->uid);
+            if (time_in_map) {
                 // bpf_printk("!! uid before: %lu\n", *value);
-                *value = now;
-                // bpf_printk("!! uid[%lu] timestamp after : %lu\n", pl->uid, *value);
+                *time_in_map = now;
+                if (pl->uid % 10 == 0)
+                    bpf_printk("!! uid[%lu] timestamp after : %lu\n", pl->uid, *time_in_map);
             }
+
+            /* Copying payload data*/
+            /* 
+            // This is one way to do that ...
+            struct Payload *pl_in_map;
+            pl_in_map = bpf_map_lookup_elem(&pkt_payload, &pl->uid);
+            if (pl_in_map) {
+                memcpy(pl_in_map, data+42, sizeof(struct Payload));
+                struct Payload *pl_temp = bpf_map_lookup_elem(&pkt_payload, &pl->uid);
+                if (pl_temp)
+                    bpf_printk("!! uid[%lu] memcpied in map!\n", pl_temp->uid);
+            }    
+            */
+            // The good way is to use update_elem
+            int r = bpf_map_update_elem(&pkt_payload, &pl->uid, pl, BPF_ANY);
+            if (r==-1) {
+                bpf_printk("Failed add to pkt_payload uid[%lu]: ", pl->uid);
+            }
+            // Check real value in map. Not important
+            struct Payload *pl_temp = bpf_map_lookup_elem(&pkt_payload, &pl->uid);
+            if (pl_temp)
+                bpf_printk("!! uid[%lu] memcpied in map!\n", pl_temp->uid);
+
+            /* Counting */
+            pkt_count = bpf_map_lookup_elem(&xdp_stats_map, &index);
+            if (pkt_count) {
+                (*pkt_count)++;
+            }
+            if (bpf_map_lookup_elem(&xsks_map, &index)){
+                return bpf_redirect_map(&xsks_map, index, XDP_ABORTED);
+            }
+            return XDP_PASS;
         }
-        /* Counting */
-        pkt_count = bpf_map_lookup_elem(&xdp_stats_map, &index);
-        if (pkt_count) {
-            (*pkt_count)++;
-            /* We pass every other packet */
-            // if ((*pkt_count)++ & 1)
-            //     return XDP_PASS;
-        }
+        return XDP_PASS;
+    } else if ((data + 1000) == data_end) {
         /* A set entry here means that the correspnding queue_id
         * has an active AF_XDP socket bound to it. */
         if (bpf_map_lookup_elem(&xsks_map, &index)){

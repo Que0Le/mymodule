@@ -32,6 +32,7 @@
 
 #include "/home/que/Desktop/mymodule/common.h"
 int time_xsks_map_fd;
+int pkt_map_fd;
 unsigned long *log_time_stamps;
 
 #define NUM_FRAMES         4096
@@ -78,7 +79,6 @@ static inline __u32 xsk_ring_prod__free(struct xsk_ring_prod *r)
 	r->cached_cons = *r->consumer + r->size;
 	return r->cached_cons - r->cached_prod;
 }
-
 
 #define NANOSEC_PER_SEC 1000000000 /* 10^9 */
 static uint64_t gettime(void)
@@ -304,11 +304,11 @@ static bool process_packet(struct xsk_socket_info *xsk,
 	if (pl->uid <MAX_LOG_ENTRY && pl->uid >= 0) {
 		log_time_stamps[pl->uid] = now;
 	}
-	// unsigned long v = 0;
-	// if (bpf_map_lookup_elem(time_xsks_map_fd, &pl->uid, &v) == 0) {
-	// 	printf("uid[%lu] kern[%lu] us[%lu] delta[%lu]\n",
-	// 	pl->uid, v, now, now-v);
-	// }
+
+	struct Payload map_pl;
+	if (bpf_map_lookup_elem(pkt_map_fd, &pl->uid, &map_pl) == 0) {
+		printf("__map: uid[%lu] map_pl uid[%lu]\n", pl->uid, map_pl.uid);
+	}
 
 	/* Lesson#3: Write an IPv6 ICMP ECHO parser to send responses
 	 *
@@ -440,7 +440,6 @@ static void rx_and_process(struct config *cfg,
 	}
 }
 
-
 static double calc_period(struct stats_record *r, struct stats_record *p)
 {
 	double period_ = 0;
@@ -571,6 +570,7 @@ int main(int argc, char **argv)
 	if (cfg.filename[0] != 0) {
 		struct bpf_map *map;
 		struct bpf_map *time_map;
+		struct bpf_map *pkt_map;
 
 		bpf_obj = load_bpf_and_xdp_attach(&cfg);
 		if (!bpf_obj) {
@@ -593,6 +593,15 @@ int main(int argc, char **argv)
 		if (time_xsks_map_fd < 0) {
 			fprintf(stderr, "ERROR: no xsks map found: %s\n",
 				strerror(time_xsks_map_fd));
+			exit(EXIT_FAILURE);
+		}
+
+		/* Pkt map */
+		pkt_map = bpf_object__find_map_by_name(bpf_obj, "pkt_payload");
+		pkt_map_fd = bpf_map__fd(pkt_map);
+		if (pkt_map_fd < 0) {
+			fprintf(stderr, "ERROR: no xsks map found: %s\n",
+				strerror(pkt_map_fd));
 			exit(EXIT_FAILURE);
 		}
 	}
