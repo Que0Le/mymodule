@@ -227,7 +227,7 @@ rx_handler_result_t rxhPacketIn(struct sk_buff **ppkt) {
     unsigned int write_index = current_index;
     void *pos = 0;
     unsigned long uid = 0;
-    while (try<MAX_TRY) {
+    while (try<KM_FIND_BUFF_SLOT_MAX_TRY) {
         if (status[write_index] == 0/*  || status[write_index] != 0 */) { /* TODO: HAHA */
             pos = buff_from_here + write_index*PKT_BUFFER_SIZE;
             // Copy packet (14 ethernet already tripped off till this stage) 20 ip, 8 udp
@@ -250,7 +250,7 @@ rx_handler_result_t rxhPacketIn(struct sk_buff **ppkt) {
         }
         write_index = (write_index + 1) % MAX_PKT;
         ++try;
-        if (try == MAX_TRY) {
+        if (try == KM_FIND_BUFF_SLOT_MAX_TRY) {
             memcpy(&uid, pkt->data+28+8, sizeof(unsigned long));
             printk(KERN_INFO "Packet uid[%lu] cannot be written in cache: No free slot!", uid);
         }

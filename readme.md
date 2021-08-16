@@ -2,6 +2,7 @@
 
 
 
+## Kernel module
 ```bash
 # insert module
 sudo insmod intercept-module.ko
@@ -16,7 +17,6 @@ sudo ./user-processing /proc/intercept_mmap
 ```bash
 #
 sudo dmesg -wH
-
 # runbox commands
 cd /home/que/Desktop/mymodule
 # copy code from dev machine
@@ -31,7 +31,14 @@ sudo insmod intercept-module.ko
 gcc -Wall user-processing.c -o user
 sudo ./user
 ```
+----------------------------------
 
+## Debug, utils, clean up ...
+```bash
+# Create link folder. This way, one scp command will copy our whole project to the runbox machine.
+ln -s /home/que/Desktop/xdp-tutorial/XDP_measure /home/que/Desktop/mymodule/
+ln -s /home/que/Desktop/xdp-tutorial/eBPF_measure /home/que/Desktop/mymodule/
+```
 ```bash
 du -h /var/log/
 # Clear journal log
@@ -78,6 +85,10 @@ pip3 install matplotlib numpy
 sudo apt install python3-tk
 ```
 
+-----------------------------------------------------------------------
+
+
+## XDP measure
 ```bash
 # Compile (not work now. Use makefile)
 #clang -O2 -Wall -target bpf -c xdp_measure_user.c -o xdp_measure_user.o
@@ -89,4 +100,16 @@ ip -force link set dev ens33 xdp obj xdp_measure_kern.o
 sudo ip link set dev ens33 xdp off
 
 sudo ./xdp_measure_user -d ens33 --filename xdp_measure_kern.o
+```
+
+## eBPF measure
+```bash
+sudo ./ebpf_measure_user -d ens33 --filename ebpf_measure_kern.o
+# Insert xdp kern program
+sudo ip link set dev ens33 xdp obj ebpf_measure_kern.o
+# or 
+ip -force link set dev ens33 xdp obj ebpf_measure_kern.o
+# force remove xdp program
+sudo ip link set dev ens33 xdp off
+
 ```
