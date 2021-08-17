@@ -81,6 +81,8 @@ sudo apt install python3-pip
 python3 -m venv venv
 . venv/bin/activate
 pip3 install matplotlib numpy 
+# Successfully installed cycler-0.10.0 kiwisolver-1.3.1 matplotlib-3.4.3 
+# numpy-1.21.2 pillow-8.3.1 pyparsing-2.4.7 python-dateutil-2.8.2 six-1.16.0
 # IF "Matplotlib is currently using agg, which is a non-GUI backend, so cannot show the figure."
 sudo apt install python3-tk
 ```

@@ -8,10 +8,14 @@ header_common_path = 'common.h'
 path_log_export_km = "/home/que/Desktop/mymodule/logs/km_log_kernel_time.txt"
 path_log_export_up = "/home/que/Desktop/mymodule/logs/user_processing_log_pull_time.txt"
 path_log_export_us = "/home/que/Desktop/mymodule/logs/server_log_arrival_time.txt"
+path_log_export_xdp_kern = "/home/que/Desktop/mymodule/logs/xdp_kern_log_arrival_time.txt"
+path_log_export_xdp_us = "/home/que/Desktop/mymodule/logs/xdp_us_log_arrival_time.txt"
 
 if (not os.path.isfile(path_log_export_km)) or \
     (not os.path.isfile(path_log_export_up)) or \
-    (not os.path.isfile(path_log_export_us)):
+    (not os.path.isfile(path_log_export_us)) or \
+    (not os.path.isfile(path_log_export_xdp_kern)) or \
+    (not os.path.isfile(path_log_export_xdp_us)):
     print("file(s) not existed! Exit now ...")
     exit()
 

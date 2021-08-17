@@ -106,7 +106,7 @@ int main() {
     printf("\nExporting log file ...\n");   // enter new line to avoid the Ctrl+C (^C) char
     FILE *fp;
     // char buf[128];
-    fp = fopen(path_log_export_us, "w");
+    fp = fopen(path_log_export_server_linuxsocket, "w");
     for (unsigned long i=0; i<MAX_LOG_ENTRY; i++) {
         // memset(buf, '\0', 128);
         // snprintf(buf, 100, "%lu\n", log_time_stamps[i]);
