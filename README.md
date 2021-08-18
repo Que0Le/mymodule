@@ -5,7 +5,13 @@ We used `scp` to copy code and executable files from dev machine to run-machine.
 # old
 scp -r -i ~/.ssh/id_rsa que@192.168.1.11:Desktop/mymodule/* /home/que/Desktop/mymodule/
 # new
-rsync -av -e "ssh -i ~/.ssh/id_rsa" que@192.168.1.11:Desktop/mymodule/* /home/que/Desktop/mymodule/
+rsync -avIL -e "ssh -i ~/.ssh/id_rsa" --exclude-from="rsync-exclude.txt" que@192.168.1.11:Desktop/mymodule/* /home/que/Desktop/mymodule/
+# -a: Recurse into directories i.e. copy all files and subdirectories. Also, turn on archive mode and all other options (-rlptgoD).
+# -v: Verbose output.
+# -I: --ignore-times   don't skip files that match size and time. Means we don't want increment copy but simply "copy".
+# -L: Copy the content of symlinks. Care: -l means copy the symlink file itself.
+# -e: -e ssh : Use ssh for remote shell
+# --exclude-from="rsync-exclude.txt": exclude file stated in "rsync-exclude.txt" file: .git/, venv/, scripts/venv/
 ```
 ## Note on kernel module
 
