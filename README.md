@@ -1,15 +1,22 @@
 # mymodule
+## Note on setup system
+We used `scp` to copy code and executable files from dev machine to run-machine. However, in order to exclude unwanted data/folder, we switched to `rsync`:
+```bash
+# old
+scp -r -i ~/.ssh/id_rsa que@192.168.1.11:Desktop/mymodule/* /home/que/Desktop/mymodule/
+# new
+rsync -av -e "ssh -i ~/.ssh/id_rsa" que@192.168.1.11:Desktop/mymodule/* /home/que/Desktop/mymodule/
+```
+## Note on kernel module
 
-# Note on kernel module
-
-## Memory
+### Memory
 - Share data with userspace program is done using `mmap` inform of a file (we create a file in ). The user space endpoint 
 
 
 
 
 
-# Note on ebpf kernel program
+## Note on ebpf kernel program
 ```c
 // boundary check is tricky. Check boundary should be done before any packet access. Otherwise error:
 /* */
