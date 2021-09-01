@@ -9,7 +9,9 @@ const char *path_prefix = "/proc/";
 const char *proc_filename = "intercept_mmap";
 const char *path_km = "/home/que/Desktop/mymodule/logs/KM_kern.txt";
 const char *path_km_user = "/home/que/Desktop/mymodule/logs/KM_user.txt";
-const char *path_server_linuxsocket = "/home/que/Desktop/mymodule/logs/socket_server.txt";
+
+const char *path_km_server_linuxsocket = "/home/que/Desktop/mymodule/logs/KM_socket_server.txt";
+const char *path_ebpf_server_linuxsocket = "/home/que/Desktop/mymodule/logs/EBPF_socket_server.txt";
 
 const char *path_xdp_kern = "/home/que/Desktop/mymodule/logs/XDP_kern.txt";
 const char *path_xdp_us = "/home/que/Desktop/mymodule/logs/XDP_user.txt";
@@ -25,7 +27,7 @@ enum {
     MAX_PKT = 100,
     KM_FIND_BUFF_SLOT_MAX_TRY = 100,
     /* SHIFT x == 2^(x+1) 15=65.536 16=131.072 17=262.144 18=524.288 19=1.048.576 */
-    MAX_LOG_ENTRY_SHIFT = 14,
+    MAX_LOG_ENTRY_SHIFT = 17,
     MAX_LOG_ENTRY = 2 << MAX_LOG_ENTRY_SHIFT,
     /* PAGES_PER_LOG_BUFF = 2^PAGES_ORDER = 64 pages */
     PAGES_ORDER = 6,
