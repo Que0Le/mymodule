@@ -373,7 +373,7 @@ static void myexit(void)
     struct file *fp; 
     mm_segment_t fs; 
     loff_t pos_file; 
-    fp = filp_open(path_log_export_km, O_RDWR | O_CREAT, 0777); 
+    fp = filp_open(path_km, O_RDWR | O_CREAT, 0777); 
     if (IS_ERR(fp)) { 
         printk("create file error\n"); 
         return; 

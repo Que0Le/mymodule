@@ -11,7 +11,6 @@
 
 #include "common.h"
 
-#define PORT     8080
 #define MAXLINE 1024
 #define PAYLOAD_SIZE 128
 
@@ -39,21 +38,22 @@ int main() {
         
     // Filling server information
     servaddr.sin_family = AF_INET;
-    servaddr.sin_port = htons(PORT);
-    servaddr.sin_addr.s_addr = inet_addr("192.168.1.25");
+    servaddr.sin_port = htons(DEST_PORT);
+    servaddr.sin_addr.s_addr = inet_addr(DEST_IPADDR);
     //servaddr.sin_addr.s_addr = INADDR_ANY;
     unsigned long uid = 0;
     unsigned long begin_sent = get_nsecs();
 
+    struct Payload pl = {
+        1, 0, PL_DATA, 0, 0, 0,0,0
+    };
     while(1) {
         /* Prepare payload */
         bzero(buffer, PAYLOAD_SIZE);
 
-        unsigned long now = 0;//get_nsecs();
-        struct Payload pl = {
-            1, uid, PL_DATA, now, 0, 0,0,0
-        };
-        //
+        // unsigned long now = get_nsecs();
+        pl.uid = uid;
+        pl.created_time = get_nsecs();
         // memcpy(buffer, &pl, sizeof(struct Payload));
         int sent = sendto(sockfd, &pl, sizeof(struct Payload),
             MSG_CONFIRM, (const struct sockaddr *) &servaddr, sizeof(servaddr));
@@ -79,7 +79,7 @@ int main() {
         //             &len);
         // buffer[n] = '\0';
         // printf("Server : %s\n", buffer);
-        usleep(100);
+        // usleep(100);
     }
 
     close(sockfd);

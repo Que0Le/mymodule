@@ -124,23 +124,22 @@ static inline void csum_replace2(__sum16 *sum, __be16 old, __be16 new)
 
 static bool fetch_and_process_packet(unsigned int next_uid)
 {
-	unsigned long now = gettime();
-
 	struct Payload map_pl;	//map payload
 	if (bpf_map_lookup_elem(pkt_map_fd, &next_uid, &map_pl) == 0) {
-		if (map_pl.client_uid != 0) {
+		if (map_pl.client_uid!=0 && map_pl.type==PL_DATA && map_pl.created_time!=0) {
+			unsigned long now = gettime();
 			// printf("__map: uid[%u] map_pl uid[%lu]\n", next_uid, map_pl.uid);
 			if (map_pl.uid <MAX_LOG_ENTRY && map_pl.uid >= 0) {
 				log_time_stamps[map_pl.uid] = now;
-			}
 #ifdef DEBUG_EBPF_INCOMING_PACKETS
-			/* Cal diff time */
-			unsigned long v = 0;
-			if (bpf_map_lookup_elem(time_xsks_map_fd, &next_uid, &v) == 0) {
-				printf("uid[%lu] diff: %lu\n", map_pl.uid, now-v);
-			}
+				/* Calc diff time */
+				unsigned long v = 0;
+				if (bpf_map_lookup_elem(time_xsks_map_fd, &next_uid, &v) == 0) {
+					printf("uid[%lu] diff: %lu\n", map_pl.uid, now-v);
+				}
 #endif
-			return true;
+				return true;
+			}
 		}
 	}
 	return false;
@@ -161,10 +160,8 @@ int main(int argc, char **argv)
 		.filename = "",
 		.progsec = "xdp_sock"
 	};
-	// struct xsk_umem_info *umem;
-	// struct xsk_socket_info *xsk_socket;
+
 	struct bpf_object *bpf_obj = NULL;
-	pthread_t stats_poll_thread;
 
 	/* Global shutdown handler */
 	signal(SIGINT, exit_application);
@@ -185,7 +182,6 @@ int main(int argc, char **argv)
 
 	/* Load custom program if configured */
 	if (cfg.filename[0] != 0) {
-		struct bpf_map *map;
 		struct bpf_map *time_map;
 		struct bpf_map *pkt_map;
 
@@ -240,8 +236,11 @@ int main(int argc, char **argv)
 	/* Export log file for userspace*/
 	printf("\nExporting log file ...\n");   // enter new line to avoid the Ctrl+C (^C) char
     FILE *fp;
-    fp = fopen(path_log_export_ebpf_us, "w");
+    fp = fopen(path_ebpf_us, "w");
     for (unsigned long i=0; i<MAX_LOG_ENTRY; i++) {
+		if (log_time_stamps[i] == 0) {
+			printf("something fucked up with log_time_stamps uid[%lu]\n", i);
+		}
         fprintf(fp, "%lu\n", log_time_stamps[i]);
 		// if (log_time_stamps[i] != 0) {
 		// 	printf("uid[%lu] us: %lu\n", i, log_time_stamps[i]);
@@ -252,7 +251,7 @@ int main(int argc, char **argv)
 
 	/* Export log file for kernel space (from map) */
 	FILE *fp2;
-	fp2 = fopen(path_log_export_ebpf_kern, "w");
+	fp2 = fopen(path_ebpf_kern, "w");
 	unsigned long v = 0;
 	for (unsigned i=0; i<MAX_LOG_ENTRY; i++) {
 		if (bpf_map_lookup_elem(time_xsks_map_fd, &i, &v) == 0) {

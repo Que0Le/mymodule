@@ -18,12 +18,9 @@
 #include "/home/que/Desktop/mymodule/common.h"
 #include <errno.h>
 
-struct bpf_map_def SEC("maps") xsks_map = {
-	.type = BPF_MAP_TYPE_XSKMAP,
-	.key_size = sizeof(int),
-	.value_size = sizeof(int),
-	.max_entries = 64,  /* Assume netdev has no more than 64 queues */
-};
+/* header parse */
+// The parsing helper functions from the packet01 lesson have moved here
+#include "../common/parsing_helpers.h"
 
 struct bpf_map_def SEC("maps") uid_timestamps = {
 	.type = BPF_MAP_TYPE_ARRAY,
@@ -55,9 +52,36 @@ int xdp_sock_prog(struct xdp_md *ctx)
     void *data_end = (void *)(long)ctx->data_end;
 	void *data = (void *)(long)ctx->data;
     
-    if (data_end >= data + 106) {
+    /* parsing. From packet-solutions/xdp_prog_kern_02.c */
+    int eth_type, ip_type;
+	struct ethhdr *eth;
+	struct iphdr *iphdr;
+	struct udphdr *udphdr;
+	struct hdr_cursor nh = { .pos = data };
+
+	eth_type = parse_ethhdr(&nh, data_end, &eth);
+	if (eth_type != bpf_htons(ETH_P_IP)) {
+	    return XDP_PASS;
+	}
+    ip_type = parse_iphdr(&nh, data_end, &iphdr);
+	if (ip_type != IPPROTO_UDP) {
+        return XDP_PASS;
+	}
+    if (parse_udphdr(&nh, data_end, &udphdr) != sizeof(struct Payload)) {
+        return XDP_PASS;
+    }
+    // bpf_printk("test: %d\n", data_end-data);
+    // bpf_printk("test: %d, port: %u, len: %u\n", data_end-data, udphdr->dest, udphdr->len);
+    // udphdr->dest = bpf_htons(bpf_ntohs(udphdr->dest) - 1);
+    if (udphdr->dest != bpf_htons(DEST_PORT)) {
+        return XDP_PASS;
+    }
+    /* End parsing */
+    // bpf_printk("test: %d, port: %u\n", data_end-data, bpf_ntohs(udphdr->dest));
+
+    /*  */
+    // if (data_end >= data + 106) {
         if (data_end >= data+42+sizeof(struct Payload)) {
-            // bpf_printk("test: %d\n", data_end-data);
             struct Payload *pl;
             pl = data+42;
             unsigned long *time_in_map = bpf_map_lookup_elem(&uid_timestamps, &pl->uid);
@@ -67,7 +91,7 @@ int xdp_sock_prog(struct xdp_md *ctx)
 #ifdef DEBUG_EBPF_INCOMING_PACKETS
                 if (pl->uid % 10 == 0) {
                     bpf_printk("!! uid[%lu] timestamp after : %lu\n", pl->uid, *time_in_map);
-                    }
+                }
 #endif
             }
 
@@ -99,25 +123,11 @@ int xdp_sock_prog(struct xdp_md *ctx)
             if (pkt_count) {
                 (*pkt_count)++;
             }
-            if (bpf_map_lookup_elem(&xsks_map, &index)){
-                return bpf_redirect_map(&xsks_map, index, XDP_ABORTED);
-            }
             return XDP_PASS;
         }
         return XDP_PASS;
-    } else if ((data + 1000) == data_end) {
-        /* A set entry here means that the correspnding queue_id
-        * has an active AF_XDP socket bound to it. */
-        if (bpf_map_lookup_elem(&xsks_map, &index)){
-            // TODO: error handler
-            bpf_redirect_map(&xsks_map, index, XDP_PASS);
-            return XDP_PASS;
-        }
-    } else {
-        return XDP_PASS;
-    }
-
-    return XDP_PASS;
+    // }
+    // return XDP_PASS;
 }
 
 /* 

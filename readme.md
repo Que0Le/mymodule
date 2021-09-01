@@ -21,6 +21,8 @@ sudo dmesg -wH
 cd /home/que/Desktop/mymodule
 # copy code from dev machine
 scp -r -i ~/.ssh/id_rsa que@192.168.1.11:Desktop/mymodule/* /home/que/Desktop/mymodule/
+## or
+rsync -avIL -e "ssh -i ~/.ssh/id_rsa" --exclude-from="rsync-exclude.txt" que@192.168.1.11:Desktop/mymodule/* /home/que/Desktop/mymodule/
 # Copy logs from run machine
 scp -r -i ~/.ssh/login_u20_runbox que@192.168.1.25:/home/que/Desktop/mymodule/logs/* /home/que/Desktop/mymodule/logs/
 # Compile and run module
@@ -30,6 +32,10 @@ sudo insmod intercept-module.ko
 # Compile and run user space program
 gcc -Wall user-processing.c -o user
 sudo ./user
+
+
+### Copy logs to dev machine
+scp -r -i ~/.ssh/id_rsa /home/que/Desktop/mymodule/logs/*.txt que@192.168.1.11:Desktop/mymodule/logs/ 
 ```
 ----------------------------------
 

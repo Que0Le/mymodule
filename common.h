@@ -7,13 +7,15 @@
 
 const char *path_prefix = "/proc/";
 const char *proc_filename = "intercept_mmap";
-const char *path_log_export_km = "/home/que/Desktop/mymodule/logs/km_log_kernel_time.txt";
-const char *path_log_export_up = "/home/que/Desktop/mymodule/logs/user_processing_log_pull_time.txt";
-const char *path_log_export_server_linuxsocket = "/home/que/Desktop/mymodule/logs/server_log_arrival_time.txt";
-const char *path_log_export_xdp_kern = "/home/que/Desktop/mymodule/logs/xdp_kern_log_arrival_time.txt";
-const char *path_log_export_xdp_us = "/home/que/Desktop/mymodule/logs/xdp_us_log_arrival_time.txt";
-const char *path_log_export_ebpf_kern = "/home/que/Desktop/mymodule/logs/ebpf_kern_log_arrival_time.txt";
-const char *path_log_export_ebpf_us = "/home/que/Desktop/mymodule/logs/ebpf_us_log_arrival_time.txt";
+const char *path_km = "/home/que/Desktop/mymodule/logs/KM_kern.txt";
+const char *path_km_user = "/home/que/Desktop/mymodule/logs/KM_user.txt";
+const char *path_server_linuxsocket = "/home/que/Desktop/mymodule/logs/socket_server.txt";
+
+const char *path_xdp_kern = "/home/que/Desktop/mymodule/logs/XDP_kern.txt";
+const char *path_xdp_us = "/home/que/Desktop/mymodule/logs/XDP_user.txt";
+
+const char *path_ebpf_kern = "/home/que/Desktop/mymodule/logs/EBPF_kern.txt";
+const char *path_ebpf_us = "/home/que/Desktop/mymodule/logs/EBPF_user.txt";
 
 enum { 
     BUFFER_SIZE = 1024,
@@ -23,7 +25,7 @@ enum {
     MAX_PKT = 100,
     KM_FIND_BUFF_SLOT_MAX_TRY = 100,
     /* SHIFT x == 2^(x+1) 15=65.536 16=131.072 17=262.144 18=524.288 19=1.048.576 */
-    MAX_LOG_ENTRY_SHIFT = 17,
+    MAX_LOG_ENTRY_SHIFT = 14,
     MAX_LOG_ENTRY = 2 << MAX_LOG_ENTRY_SHIFT,
     /* PAGES_PER_LOG_BUFF = 2^PAGES_ORDER = 64 pages */
     PAGES_ORDER = 6,
@@ -31,6 +33,9 @@ enum {
     MAX_ENTRIES_PER_LOG_BUFF = (2 << (PAGES_ORDER-1))*SIZE_OF_PAGE_HC/8,
     NUM_LOG_BUFF = MAX_LOG_ENTRY / MAX_ENTRIES_PER_LOG_BUFF
 };
+
+#define DEST_PORT 8080
+#define DEST_IPADDR "192.168.1.25"
 
 enum  {
     PL_KEEP_ALIVE = 1,
