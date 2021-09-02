@@ -42,10 +42,9 @@ thresholds = [
     [ 5,6 ],
     [ 7, 8],
     [ 9,10 ],
-    [ 11,12 ],
-    [ 13,14 ],
-    [ 15,16 ],
-    [ 17,18 ],
+    [ 11, 13 ],
+    [ 13, 16 ],
+    [ 16, 19 ],
     [ 19,20 ],
     [ 20, 25],
     [ 25, 30],
@@ -108,32 +107,79 @@ if len(km_log)!=len(up_log) or \
     exit()
 
 """ Check data correctness """
-for i in range(0, len(km_log)):
-    if km_log[i]==0:
-        print(f"Zero: km_log[{str(i)}]")
-    if up_log[i]==0:
-        print(f"Zero: up_log[{str(i)}]")
-    if km_s_log[i]==0:
-        print(f"Zero: km_s_log[{str(i)}]")
-    if ebpf_s_log[i]==0:
-        print(f"Zero: ebpf_s_log[{str(i)}]")
-    if ebpf_log[i]==0:
-        print(f"Zero: ebpf_log[{str(i)}]")
-    if usebpf_log[i]==0:
-        print(f"Zero: usebpf_log[{str(i)}]")
-    #####################################################################
-    if up_log[i]-km_log[i] <= 0:
-        print("up_log[i]-km_log[i]: " + str(up_log[i]-km_log[i]))
-    if km_s_log[i]-up_log[i] <= 0:
-        print("km_s_log[i]-up_log[i]: " + str(km_s_log[i]-up_log[i]))
-        pass
-    if usebpf_log[i]-ebpf_log[i] <= 0:
-        print("usebpf_log[i]-ebpf_log[i]: " + str(usebpf_log[i]-ebpf_log[i]))
-    if ebpf_s_log[i]-usebpf_log[i] <= 0:
-        print("ebpf_s_log[i]-usebpf_log[i]: " + str(ebpf_s_log[i]-usebpf_log[i]))
-        pass
+logs = [km_log, up_log, km_s_log, ebpf_s_log, ebpf_log, usebpf_log]
+logs_label = ["km_log", "up_log", "km_s_log", "ebpf_s_log", "ebpf_log", "usebpf_log"]
+logs_zeroed = [0] * len(logs)
+###
+diffs_up_km = [0] * len(km_log)
+diffs_s_km = [0] * len(km_log)
+diffs_s_up = [0] * len(km_log)
 
-exit()
+diffs_usebpf_ebpf = [0] * len(km_log)
+diffs_s_ebpf = [0] * len(km_log)
+diffs_s_usebpf = [0] * len(km_log)
+
+diffs = [diffs_up_km, diffs_s_km, diffs_s_up, diffs_usebpf_ebpf, diffs_s_ebpf, diffs_s_usebpf]
+diffs_label = ["diffs_up_km", "diffs_s_km", "diffs_s_up", "diffs_usebpf_ebpf", "diffs_s_ebpf", "diffs_s_usebpf"]
+diffs_zeroed = [0] * len(diffs)
+
+for i in range(0, len(km_log)):
+    ### Check zero
+    for j in range(0, len(logs)):
+        if logs[j][i] == 0:
+            logs_zeroed[j] = logs_zeroed[j] + 1
+    ### Cal diffs
+    d_up_km         = up_log[i] - km_log[i]
+    if d_up_km<0:
+        diffs_zeroed[0] += 1
+    elif (up_log[i]!=0 and km_log[i]!=0):
+        diffs_up_km[i] = d_up_km
+    #
+    d_s_km          = km_s_log[i] - km_log[i]
+    if d_s_km<0:
+        diffs_zeroed[1] += 1
+    elif (km_s_log[i]!=0 and km_log[i]!=0):
+        diffs_s_km[i] = d_s_km
+    #
+    d_s_up          = km_s_log[i] - up_log[i]
+    if d_s_up<0:
+        diffs_zeroed[2] += 1
+    elif (km_s_log[i]!=0 and up_log[i]!=0):
+        diffs_s_up[i] = d_s_up
+    #
+    d_usebpf_ebpf   = usebpf_log[i] - ebpf_log[i]
+    if d_usebpf_ebpf<0:
+        diffs_zeroed[3] += 1
+    elif (usebpf_log[i]!=0 and ebpf_log[i]!=0):
+        diffs_usebpf_ebpf[i] = d_usebpf_ebpf
+    #
+    d_s_ebpf        = ebpf_s_log[i] - ebpf_log[i]
+    if d_s_ebpf<0:
+        diffs_zeroed[4] += 1
+    elif (ebpf_s_log[i]!=0 and ebpf_log[i]!=0):
+        diffs_s_ebpf[i] = d_s_ebpf
+    #
+    d_s_usebpf      = ebpf_s_log[i] - usebpf_log[i]
+    if d_s_ebpf<0:
+        diffs_zeroed[5] += 1
+    elif (ebpf_s_log[i]!=0 and usebpf_log[i]!=0):
+        diffs_s_usebpf[i] = d_s_usebpf
+    #
+
+print("#################")
+print("Zeroed: ")
+for i in range(0, len(logs_zeroed)):
+    print(f"{str(logs_label[i])}: {str(logs_zeroed[i])}")
+print("#################")
+print("Negatived: ")
+for i in range(0, len(diffs_zeroed)):
+    print(f"{str(diffs_label[i])}: {str(diffs_zeroed[i])}")
+print("#################")
+print("Max-Min: ")
+for i in range(0, len(diffs_zeroed)):
+    print(f"{str(diffs_label[i])}: {str(max(diffs[i]))}-{str(min(diffs[i]))}")
+print("#################")
+# exit()
 
 """ 
 print(len(km_log))
@@ -179,27 +225,27 @@ exit
 """
 
 for i in range(0, len(km_log)):
-    d_up_km = int((up_log[i] - km_log[i])/to_usec)
-    d_s_km = int((km_s_log[i] - km_log[i])/to_usec)
-    d_s_up = int((km_s_log[i] - up_log[i])/to_usec)
+    d_up_km = int(diffs_up_km[i]/to_usec)
+    d_s_km = int(diffs_s_km[i]/to_usec)
+    d_s_up = int(diffs_s_up[i]/to_usec)
 
-    d_usebpf_ebpf = int((usebpf_log[i] - ebpf_log[i])/to_usec)
-    d_s_ebpf = int((ebpf_s_log[i] - ebpf_log[i])/to_usec)
-    d_s_usebpf = int((ebpf_s_log[i] - usebpf_log[i])/to_usec)
+    d_usebpf_ebpf = int(diffs_usebpf_ebpf[i]/to_usec)
+    d_s_ebpf = int(diffs_s_ebpf[i]/to_usec)
+    d_s_usebpf = int(diffs_s_usebpf[i]/to_usec)
 
     for j in range(0, len(thresholds)):
-        if (d_up_km >= v*thresholds[j][0]) and (d_up_km < v*thresholds[j][1]):
+        if diffs_up_km[i]!=0 and (d_up_km >= v*thresholds[j][0]) and (d_up_km < v*thresholds[j][1]):
             diff_up_km[j] += 1
-        if (d_s_km >= v*thresholds[j][0]) and (d_s_km < v*thresholds[j][1]):
+        if diffs_s_km[i]!=0 and (d_s_km >= v*thresholds[j][0]) and (d_s_km < v*thresholds[j][1]):
             diff_s_km[j] += 1
-        if (d_s_up >= v*thresholds[j][0]) and (d_s_up < v*thresholds[j][1]):
+        if diffs_s_up[i]!=0 and (d_s_up >= v*thresholds[j][0]) and (d_s_up < v*thresholds[j][1]):
             diff_s_up[j] += 1
         ##
-        if (d_usebpf_ebpf >= v*thresholds[j][0]) and (d_usebpf_ebpf < v*thresholds[j][1]):
+        if diffs_usebpf_ebpf[i]!=0 and (d_usebpf_ebpf >= v*thresholds[j][0]) and (d_usebpf_ebpf < v*thresholds[j][1]):
             diff_usebpf_ebpf[j] += 1
-        if (d_s_ebpf >= v*thresholds[j][0]) and (d_s_ebpf < v*thresholds[j][1]):
+        if diffs_s_ebpf[i]!=0 and (d_s_ebpf >= v*thresholds[j][0]) and (d_s_ebpf < v*thresholds[j][1]):
             diff_s_ebpf[j] += 1
-        if (d_s_usebpf >= v*thresholds[j][0]) and (d_s_usebpf < v*thresholds[j][1]):
+        if diffs_s_usebpf[i]!=0 and (d_s_usebpf >= v*thresholds[j][0]) and (d_s_usebpf < v*thresholds[j][1]):
             diff_s_usebpf[j] += 1
 
 print("diff_up_km")
@@ -218,7 +264,7 @@ print(diff_s_usebpf)
 
 """ Plotting """
 x = np.arange(len(labels))  # the label locations
-width = 0.10  # the width of the bars
+width = 0.11  # the width of the bars
 
 fig, ax = plt.subplots()
 rects1 = ax.bar(
@@ -257,7 +303,12 @@ ax.legend()
 ax.bar_label(rects1, padding=3)
 ax.bar_label(rects2, padding=3)
 ax.bar_label(rects3, padding=3)
+ax.bar_label(rects4, padding=3)
+ax.bar_label(rects5, padding=3)
+ax.bar_label(rects6, padding=3)
 fig.set_size_inches(18.5, 10.5)
 fig.tight_layout()
 
+plt.xticks(rotation='vertical')
+plt.yticks(rotation='vertical')
 plt.show()
