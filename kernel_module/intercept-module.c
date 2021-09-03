@@ -34,6 +34,7 @@ unsigned int current_index = 0; // index of (should be) next free cell
 int status[MAX_PKT] = {0};
 
 unsigned long count_pkt = 0;
+unsigned long count_pkt_overflow = 0;
 
 /* After unmap. */
 static void vm_close(struct vm_area_struct *vma)
@@ -136,6 +137,7 @@ static ssize_t read(struct file *filp, char __user *buf, size_t len, loff_t *off
         if (copy_to_user(buf, buff_temp, BUFFER_SIZE)) {
             // unsigned long __copy_to_user (void __user * to,const void * from,unsigned long n);
             // Returns number of bytes that could not be copied. On success, this will be zero. 
+            printk(KERN_INFO "copy_to_user failed!!!\n");
             ret = -EFAULT;
         } else {
             // Copy success. Clean up the bufffer slot(s)
@@ -222,58 +224,56 @@ rx_handler_result_t rxhPacketIn(struct sk_buff **ppkt) {
     }
     
     u64 now = ktime_get_ns();
+    unsigned long uid = 0;
+    count_pkt += 1;
+
+    /* Write timestamp to log */
+    memcpy(&uid, pkt->data+28+8, sizeof(unsigned long));
+    if (uid<MAX_LOG_ENTRY && uid>=0) {
+#ifdef DEBUG_KM_INCOMING_PACKETS
+        printk(KERN_INFO "uid[%lu] now[%llu]\n", uid, now);
+#endif
+        unsigned int buff_index = uid / MAX_ENTRIES_PER_LOG_BUFF;
+        log_buffs[buff_index][uid % MAX_ENTRIES_PER_LOG_BUFF] = now;
+    }
+
     /* Write data into the module's cache */
     unsigned int try = 0;
     unsigned int write_index = current_index;
     void *pos = 0;
-    unsigned long uid = 0;
     while (try<KM_FIND_BUFF_SLOT_MAX_TRY) {
-        if (status[write_index] == 0/*  || status[write_index] != 0 */) { /* TODO: HAHA */
+        if (status[write_index] == 0) {
             pos = buff_from_here + write_index*PKT_BUFFER_SIZE;
             // Copy packet (14 ethernet already tripped off till this stage) 20 ip, 8 udp
             memcpy(pos, pkt->data+28, (unsigned int)ntohs(udp_udphdr->len) - 8);
             // Set ks_time_arrival_2 to "now"
-            memcpy(pos+40, &now, sizeof(u64));  // TODO: change to sizeof unsigned long long
+            // memcpy(pos+40, &now, sizeof(u64));
             status[write_index] = 1;
             current_index = (write_index + 1) % MAX_PKT;
-
-            /* Write timestamp to log */
-            memcpy(&uid, pos+8, sizeof(unsigned long));
-            if (uid<MAX_LOG_ENTRY && uid>=0) {
-#ifdef DEBUG_KM_INCOMING_PACKETS
-                printk(KERN_INFO "uid[%lu] now[%llu]\n", uid, now);
-#endif
-                unsigned int buff_index = uid / MAX_ENTRIES_PER_LOG_BUFF;
-                log_buffs[buff_index][uid % MAX_ENTRIES_PER_LOG_BUFF] = now;
-            }
             break;
         }
         write_index = (write_index + 1) % MAX_PKT;
         ++try;
+        /* No free slot found. We will just discard the packet.
+         * TODO: Should we replace old packet with new incomming? 
+         */
         if (try == KM_FIND_BUFF_SLOT_MAX_TRY) {
+            count_pkt_overflow += 1;
+#ifdef DEBUG_KM_INCOMING_PACKETS
             memcpy(&uid, pkt->data+28+8, sizeof(unsigned long));
             printk(KERN_INFO "Packet uid[%lu] cannot be written in cache: No free slot!", uid);
+#endif
         }
-
     }
 
-    count_pkt += 1;
 #ifdef DEBUG_KM_INCOMING_PACKETS
     printk(KERN_INFO "UDP srcPort [%u], destPort[%u], len[%u], check_sum[%u], payload_byte[%d] - pos[%d] now[%llu]\n",
         (unsigned int)ntohs(udp_udphdr->source) ,(unsigned int)ntohs(udp_udphdr->dest), 
         (unsigned int)ntohs(udp_udphdr->len), (unsigned int)ntohs(udp_udphdr->check), 
         (unsigned int)ntohs(udp_udphdr->len) - 8, write_index, now);
-#endif                               
-    /* Parse TCP header */
-    // tcp_header = (struct tcphdr *)skb_transport_header(pkt) ;
-    // tcp_headerflags = ((uint8_t *)&tcp_header->ack_seq) + 5;
-    // printk(KERN_INFO "TCP sourcePort [%u], destinationPort[%u], TCP flags 8 bit [%u], CWR [%u], ECE [%u], URG [%u], ACK [%u], PSH [%u], RST [%u], SYN [%u], FIN [%u]\n",
-    //       (unsigned int)ntohs(tcp_header->source) ,(unsigned int)ntohs(tcp_header->dest), *tcp_headerflags,
-    //       (uint)tcp_header->cwr, (uint)tcp_header->ece,(uint)tcp_header->urg,(uint)tcp_header->ack,(uint)tcp_header->psh,(uint)tcp_header->rst,
-    //       (uint)tcp_header->syn,(uint)tcp_header->fin);
+#endif  
 
     return RX_HANDLER_PASS;
-
 }
 
 /* This was derived from linux source code net/core/net.c .
@@ -369,7 +369,8 @@ static void myexit(void)
     printk(KERN_INFO "[RXH] Kernel module unloaded.\n");
 	
     /* write log buffers in file */
-    printk(KERN_INFO "[RXH] Kernel module exporting log. Total count_pkts[%lu] ...\n", count_pkt);
+    printk(KERN_INFO "[RXH] Kernel module exporting log");
+    printk(KERN_INFO "Total count_pkts[%lu] count_pkt_overflow[%lu]\n", count_pkt, count_pkt_overflow);
     struct file *fp; 
     mm_segment_t fs; 
     loff_t pos_file; 
