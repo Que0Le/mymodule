@@ -367,8 +367,9 @@ static void myexit(void)
 {
     unregisterRxHandlers();
     printk(KERN_INFO "[RXH] Kernel module unloaded.\n");
-	
+
     /* write log buffers in file */
+    unsigned long zeroed = 0;
     printk(KERN_INFO "[RXH] Kernel module exporting log");
     printk(KERN_INFO "Total count_pkts[%lu] count_pkt_overflow[%lu]\n", count_pkt, count_pkt_overflow);
     struct file *fp; 
@@ -388,9 +389,12 @@ static void myexit(void)
         unsigned int buff_index = i / MAX_ENTRIES_PER_LOG_BUFF;
         snprintf(temp, 100, "%lu\n", log_buffs[buff_index][i % MAX_ENTRIES_PER_LOG_BUFF]);
         vfs_write(fp, temp, strlen(temp), &pos_file);
+        if (log_buffs[buff_index][i % MAX_ENTRIES_PER_LOG_BUFF] == 0)
+            zeroed += 1;
     }
     filp_close(fp, NULL); 
     set_fs(fs);
+    printk(KERN_INFO "Zeroed: %lu\n", zeroed);
 
     /* Free memory */
     remove_proc_entry(proc_filename, NULL);

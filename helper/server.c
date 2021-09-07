@@ -11,8 +11,11 @@
 #include "../common.h"
 #include <signal.h>
 
-static volatile sig_atomic_t keep_running = 1;
+// Logging
+static unsigned long *log_buffs[NUM_LOG_BUFF];
 
+/* Sense breaking signal */
+static volatile sig_atomic_t keep_running = 1;
 static void sig_handler(int _)
 {
     (void)_;
@@ -39,19 +42,36 @@ int main(int argc, char *argv[]) {
         printf("Log only for KM or EBPF\n");
         exit(EXIT_FAILURE);
     }
+
     /* Allocate mem for log */
-    unsigned long *log_time_stamps = (unsigned long *) malloc(MAX_LOG_ENTRY*8);
-    if (!log_time_stamps) {
-        printf("Malloc log_time_stamps failed\n!");
-        return -1;
-    }
-    memset(log_time_stamps, 0, MAX_LOG_ENTRY*8);
-    for (int i=0; i<MAX_LOG_ENTRY; i++) {
-        if (log_time_stamps[i] != 0) {
-            printf("memset log_time_stamps failed\n!");
+    // unsigned long *log_time_stamps = (unsigned long *) malloc(MAX_LOG_ENTRY*8);
+    // if (!log_time_stamps) {
+    //     printf("Malloc log_time_stamps failed\n!");
+    //     return -1;
+    // }
+    // memset(log_time_stamps, 0, MAX_LOG_ENTRY*8);
+    // for (int i=0; i<MAX_LOG_ENTRY; i++) {
+    //     if (log_time_stamps[i] != 0) {
+    //         printf("memset log_time_stamps failed\n!");
+    //         return -1;
+    //     }
+    // }
+
+    /* Alloc memory for log buffers */
+    unsigned long *r;
+    for (int i=0; i<NUM_LOG_BUFF; i++) {
+        r =  (unsigned long *) malloc(MAX_ENTRIES_PER_LOG_BUFF*8);
+        if (!r) {
+            // error
+            printf("[ERROR: malloc(MAX_ENTRIES_PER_LOG_BUFF*8) i[%d] of %d max_entries[%d]!\n", i, NUM_LOG_BUFF, MAX_ENTRIES_PER_LOG_BUFF);
+            for (int j=0; j<i; j++) {
+                free(log_buffs[j]);
+            }
             return -1;
         }
+        log_buffs[i] = r;
     }
+    printf("Allocated NUM_LOG_BUFF[%d] for MAX_LOG_ENTRY[%d] packets!\n", NUM_LOG_BUFF, MAX_LOG_ENTRY);
 
     int sockfd;
     char buffer[MAXLINE];
@@ -85,7 +105,12 @@ int main(int argc, char *argv[]) {
     //Ctrl+Z - SIGTSTP
 
     printf("Server listening ... Ctrl+Z to break while(). Ctrl+C to terminate the program.\n");
+    // unsigned long count_log = 0;
     while(keep_running) {
+        // if (count_log == MAX_LOG_ENTRY) {
+        //     break;
+        // }
+
         socklen_t len;
         bzero(buffer, MAXLINE);
         len = sizeof(cliaddr);  //len is value/resuslt
@@ -97,7 +122,10 @@ int main(int argc, char *argv[]) {
         struct Payload pl;
         memcpy(&pl, buffer, sizeof(struct Payload));
         if (pl.uid <MAX_LOG_ENTRY && pl.uid >= 0) {
-            log_time_stamps[pl.uid] = now;
+            // log_time_stamps[pl.uid] = now;
+            unsigned long buff_index = pl.uid / MAX_ENTRIES_PER_LOG_BUFF;
+            log_buffs[buff_index][pl.uid % MAX_ENTRIES_PER_LOG_BUFF] = now;
+            // count_log += 1;
         }
 #ifdef DEBUG_US_INCOMING_PACKETS
         printf("-------------------------------------------------------\n");
@@ -111,17 +139,34 @@ int main(int argc, char *argv[]) {
 
     /* Export log to text file */
     printf("\nExporting log file ...\n");   // enter new line to avoid the Ctrl+C (^C) char
+    unsigned long zeroed = 0;
     FILE *fp;
     if (strcmp("km", argv[1])==0) {
         fp = fopen(path_km_server_linuxsocket, "w");
     } else if (strcmp("ebpf", argv[1])==0) {
         fp = fopen(path_ebpf_server_linuxsocket, "w");
     }
+    /* 
     for (unsigned long i=0; i<MAX_LOG_ENTRY; i++) {
+        if (log_time_stamps[i] == 0)
+            zeroed += 1;
         fprintf(fp, "%lu\n", log_time_stamps[i]);
     }
+    */
+    for (unsigned long i=0; i<MAX_LOG_ENTRY; i++) {
+        unsigned long buff_index = i / MAX_ENTRIES_PER_LOG_BUFF;
+        if (log_buffs[buff_index][i % MAX_ENTRIES_PER_LOG_BUFF] == 0)
+            zeroed += 1;
+        fprintf(fp, "%lu\n", log_buffs[buff_index][i % MAX_ENTRIES_PER_LOG_BUFF]);
+    }
+
     fclose(fp);
-    free(log_time_stamps);
-    
+    printf("Zeroed: %lu\n", zeroed);
+
+    // free(log_time_stamps);
+    for (int i=0; i<NUM_LOG_BUFF; i++) {
+        free(log_buffs[i]);
+    }
+
     return 0;
 }

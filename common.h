@@ -20,14 +20,14 @@ const char *path_ebpf_kern = "/home/que/Desktop/mymodule/logs/EBPF_kern.txt";
 const char *path_ebpf_us = "/home/que/Desktop/mymodule/logs/EBPF_user.txt";
 
 enum { 
-    BUFFER_SIZE = 1024,
+    BUFFER_SIZE = 512,
     PKT_BUFFER_SIZE = 128,
-    PKTS_PER_BUFFER = 8,                // = BUFFER_SIZE / PKT_BUFFER_SIZE
+    PKTS_PER_BUFFER = BUFFER_SIZE/PKT_BUFFER_SIZE,                // = BUFFER_SIZE / PKT_BUFFER_SIZE
     SIZE_OF_PAGE_HC = 4096,             // hardcode
     MAX_PKT = 100,
     KM_FIND_BUFF_SLOT_MAX_TRY = 100,
     /* SHIFT x == 2^(x+1) 15=65.536 16=131.072 17=262.144 18=524.288 19=1.048.576 */
-    MAX_LOG_ENTRY_SHIFT = 17,
+    MAX_LOG_ENTRY_SHIFT = 19,
     MAX_LOG_ENTRY = 2 << MAX_LOG_ENTRY_SHIFT,
     /* PAGES_PER_LOG_BUFF = 2^PAGES_ORDER = 64 pages */
     PAGES_ORDER = 6,
@@ -36,8 +36,14 @@ enum {
     NUM_LOG_BUFF = MAX_LOG_ENTRY / MAX_ENTRIES_PER_LOG_BUFF
 };
 
+/* Rate of while-loop */
+enum {
+    CLIENT_RATE = 30,
+    USER_PROCESSING_RATE = 10
+};
+
 #define DEST_PORT 8080
-#define DEST_IPADDR "192.168.1.25"
+#define DEST_IPADDR "192.168.1.11"
 
 enum  {
     PL_KEEP_ALIVE = 1,

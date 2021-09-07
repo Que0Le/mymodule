@@ -25,7 +25,7 @@ static unsigned long get_nsecs(void)
 // Driver code
 int main() {
     int sockfd;
-    char buffer[MAXLINE];
+    // char buffer[MAXLINE];
     struct sockaddr_in     servaddr;
 
     // Creating socket file descriptor
@@ -47,9 +47,14 @@ int main() {
     struct Payload pl = {
         1, 0, PL_DATA, 0, 0, 0,0,0
     };
+
+    unsigned long count_i = 0;
     while(1) {
+
+        if (uid > MAX_LOG_ENTRY)
+            usleep(100*1000);
         /* Prepare payload */
-        bzero(buffer, PAYLOAD_SIZE);
+        // bzero(buffer, PAYLOAD_SIZE);
 
         // unsigned long now = get_nsecs();
         pl.uid = uid;

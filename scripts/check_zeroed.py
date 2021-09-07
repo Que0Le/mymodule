@@ -15,11 +15,13 @@ for file in onlyfiles:
     print(file)
     # d = []
     zeroed = 0
+    length = 0
     with open(path+ "/" + file) as file:
         for line in file:
             v = int(line)
             if (v==0):
                 zeroed += 1
+            length += 1
             # d.append(v)
-    print(zeroed)
+    print(str(zeroed) + "/" + str(length))
     # print(len(d))
