@@ -32,12 +32,15 @@
 
 #include "/home/que/Desktop/mymodule/common.h"
 int time_xsks_map_fd;
-unsigned long *log_time_stamps;
+// unsigned long *log_time_stamps;
 int pkt_map_fd;
 
 #ifndef CLOCK_MONOTONIC
 #define CLOCK_MONOTONIC 1
 #endif
+
+// Logging
+static unsigned long *log_buffs[NUM_LOG_BUFF];
 
 #define NANOSEC_PER_SEC 1000000000 /* 10^9 */
 static uint64_t gettime(void)
@@ -130,7 +133,9 @@ static bool fetch_and_process_packet(unsigned int next_uid)
 			unsigned long now = gettime();
 			// printf("__map: uid[%u] map_pl uid[%lu]\n", next_uid, map_pl.uid);
 			if (map_pl.uid <MAX_LOG_ENTRY && map_pl.uid >= 0) {
-				log_time_stamps[map_pl.uid] = now;
+				// log_time_stamps[map_pl.uid] = now;
+				unsigned int buff_index = map_pl.uid / MAX_ENTRIES_PER_LOG_BUFF;
+				log_buffs[buff_index][map_pl.uid % MAX_ENTRIES_PER_LOG_BUFF] = now;
 #ifdef DEBUG_EBPF_INCOMING_PACKETS
 				/* Calc diff time */
 				unsigned long v = 0;
@@ -211,18 +216,34 @@ int main(int argc, char **argv)
 	}
 
 	/* Allocate memory for user space log */
-    log_time_stamps = (unsigned long *) malloc(MAX_LOG_ENTRY*8);
-    if (!log_time_stamps) {
-        printf("Malloc log_time_stamps failed\n!");
-        return -1;
-    }
-    memset(log_time_stamps, 0, MAX_LOG_ENTRY*8);
-    for (int i=0; i<MAX_LOG_ENTRY; i++) {
-        if (log_time_stamps[i] != 0) {
-            printf("memset log_time_stamps failed\n!");
+    // log_time_stamps = (unsigned long *) malloc(MAX_LOG_ENTRY*8);
+    // if (!log_time_stamps) {
+    //     printf("Malloc log_time_stamps failed\n!");
+    //     return -1;
+    // }
+    // memset(log_time_stamps, 0, MAX_LOG_ENTRY*8);
+    // for (int i=0; i<MAX_LOG_ENTRY; i++) {
+    //     if (log_time_stamps[i] != 0) {
+    //         printf("memset log_time_stamps failed\n!");
+    //         return -1;
+    //     }
+    // }
+
+	/* Alloc memory for log buffers */
+    unsigned long *r;
+    for (int i=0; i<NUM_LOG_BUFF; i++) {
+        r =  (unsigned long *) malloc(MAX_ENTRIES_PER_LOG_BUFF*8);
+        if (!r) {
+            // error
+            printf("[ERROR: malloc(MAX_ENTRIES_PER_LOG_BUFF*8) i[%d] of %d max_entries[%d]!\n", i, NUM_LOG_BUFF, MAX_ENTRIES_PER_LOG_BUFF);
+            for (int j=0; j<i; j++) {
+                free(log_buffs[j]);
+            }
             return -1;
         }
+        log_buffs[i] = r;
     }
+    printf("Allocated NUM_LOG_BUFF[%d] for MAX_LOG_ENTRY[%d] packets!\n", NUM_LOG_BUFF, MAX_LOG_ENTRY);
 
 	/* Fetch packets */
 	unsigned int next_uid = 0;
@@ -230,24 +251,30 @@ int main(int argc, char **argv)
 		if (fetch_and_process_packet(next_uid)) {
 			next_uid++;
 		}
-		// usleep(10);
 	}
 
 	/* Export log file for userspace*/
 	printf("\nExporting log file ...\n");   // enter new line to avoid the Ctrl+C (^C) char
     FILE *fp;
     fp = fopen(path_ebpf_us, "w");
+	unsigned long zeroed = 0;
     for (unsigned long i=0; i<MAX_LOG_ENTRY; i++) {
-		if (log_time_stamps[i] == 0) {
-			printf("something fucked up with log_time_stamps uid[%lu]\n", i);
-		}
-        fprintf(fp, "%lu\n", log_time_stamps[i]);
-		// if (log_time_stamps[i] != 0) {
-		// 	printf("uid[%lu] us: %lu\n", i, log_time_stamps[i]);
+		// if (log_time_stamps[i] == 0) {
+		// 	printf("something fucked up with log_time_stamps uid[%lu]\n", i);
 		// }
+        // fprintf(fp, "%lu\n", log_time_stamps[i]);
+
+        unsigned int buff_index = i / MAX_ENTRIES_PER_LOG_BUFF;
+        if (log_buffs[buff_index][i % MAX_ENTRIES_PER_LOG_BUFF] == 0)
+            zeroed += 1;
+        fprintf(fp, "%lu\n", log_buffs[buff_index][i % MAX_ENTRIES_PER_LOG_BUFF]);
     }
     fclose(fp);
-	free(log_time_stamps);
+
+    for (int i=0; i<NUM_LOG_BUFF; i++) {
+        free(log_buffs[i]);
+    }
+	// free(log_time_stamps);
 
 	/* Export log file for kernel space (from map) */
 	FILE *fp2;
@@ -263,6 +290,7 @@ int main(int argc, char **argv)
 			printf("Error reading from time log map with bpf_map_lookup_elem!\n");
 		}
 	}
+	printf("Zeroed: %lu\n", zeroed);
 	fclose(fp2);
 
 	/* Cleanup */

@@ -110,13 +110,14 @@ static ssize_t read(struct file *filp, char __user *buf, size_t len, loff_t *off
 		ret = min(len, (size_t)BUFFER_SIZE - (size_t)*off);
 
         /* We return buff_temp (BUFFER_SIZE) data to userspace */
-        unsigned int ci = current_index;
+        unsigned int ci = current_index;        // remember last read index from last read() access
         memset(buff_temp, '\0', BUFFER_SIZE);
-        int copied_pkts = 0;
-        int copied_index[PKTS_PER_BUFFER];
+        int copied_pkts = 0;                    // how many packets did we grab to be copied to user space
+        int copied_index[PKTS_PER_BUFFER];      // index of those pkt in KM buffer
         for (int i=0; i<PKTS_PER_BUFFER; i++)
             copied_index[i] = -1;
-        int try = 0;
+        int try = 0;                            // keep track on how many times we search for pkt in buffer
+        /* We search for <PKTS_PER_BUFFER> available pkts in buffer, put it in buff_temp*/
         while (copied_pkts < PKTS_PER_BUFFER && try<MAX_PKT) {
             if (status[ci] != 0) {
                 memcpy(buff_temp+copied_pkts*PKT_BUFFER_SIZE, 
@@ -127,20 +128,21 @@ static ssize_t read(struct file *filp, char __user *buf, size_t len, loff_t *off
             ci = (ci + 1) % MAX_PKT;
             try += 1;
         }
-        if (copied_pkts==0) {
-            return 0;
-        }
+        /* If no pkts found in buffer, return */
+        // if (copied_pkts==0) {
+        //     return 0;
+        // }
 #ifdef DEBUG_READ_FROM_US
         printk(KERN_INFO "copied [%d] pkts\n", copied_pkts);
 #endif
-        /* Deliver to userspace */
+        /* Else, deliver to userspace and cleanup on success */
         if (copy_to_user(buf, buff_temp, BUFFER_SIZE)) {
             // unsigned long __copy_to_user (void __user * to,const void * from,unsigned long n);
             // Returns number of bytes that could not be copied. On success, this will be zero. 
             printk(KERN_INFO "copy_to_user failed!!!\n");
             ret = -EFAULT;
         } else {
-            // Copy success. Clean up the bufffer slot(s)
+            // Copy success. Clean up the KM bufffer slot(s)
             for (int i=0; i<PKTS_PER_BUFFER; i++) {
                 if (copied_index[i] != -1) {
                     memset(buff_from_here + copied_index[i]*PKT_BUFFER_SIZE, '\0', PKT_BUFFER_SIZE);
@@ -259,10 +261,10 @@ rx_handler_result_t rxhPacketIn(struct sk_buff **ppkt) {
          */
         if (try == KM_FIND_BUFF_SLOT_MAX_TRY) {
             count_pkt_overflow += 1;
-#ifdef DEBUG_KM_INCOMING_PACKETS
-            memcpy(&uid, pkt->data+28+8, sizeof(unsigned long));
+// #ifdef DEBUG_KM_INCOMING_PACKETS
+            // memcpy(&uid, pkt->data+28+8, sizeof(unsigned long));
             printk(KERN_INFO "Packet uid[%lu] cannot be written in cache: No free slot!", uid);
-#endif
+// #endif
         }
     }
 
@@ -371,7 +373,6 @@ static void myexit(void)
     /* write log buffers in file */
     unsigned long zeroed = 0;
     printk(KERN_INFO "[RXH] Kernel module exporting log");
-    printk(KERN_INFO "Total count_pkts[%lu] count_pkt_overflow[%lu]\n", count_pkt, count_pkt_overflow);
     struct file *fp; 
     mm_segment_t fs; 
     loff_t pos_file; 
@@ -394,7 +395,11 @@ static void myexit(void)
     }
     filp_close(fp, NULL); 
     set_fs(fs);
+    printk(KERN_INFO "---------------------------------------\n");
+    printk(KERN_INFO "Total count_pkts[%lu]\n", count_pkt);
+    printk(KERN_INFO "Count_pkt_overflow: %lu\n", count_pkt_overflow);
     printk(KERN_INFO "Zeroed: %lu\n", zeroed);
+    printk(KERN_INFO "---------------------------------------\n");
 
     /* Free memory */
     remove_proc_entry(proc_filename, NULL);

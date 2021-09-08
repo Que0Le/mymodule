@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
     int fd;
     long page_size;
     char *address1/* , *address2 */;
-    char buf2[BUFFER_SIZE];
+    char buff_read[BUFFER_SIZE];
     // uintptr_t paddr;
 
     /* Allocate mem for log */
@@ -97,21 +97,21 @@ int main(int argc, char **argv) {
 
     signal(SIGINT, sig_handler);
     // unsigned long count_log = 0;
-    unsigned long count_i = 0;
+    // unsigned long count_i = 0;
     while(keep_running) {
-        count_i += 1;
-        if ((count_i%USER_PROCESSING_RATE)!=0)
-            continue;
+        // count_i += 1;
+        // if ((count_i%USER_PROCESSING_RATE)!=0)
+        //     continue;
 
-        memset(buf2, '\0', BUFFER_SIZE);
-        /* ssize_t r =  */pread(fd, buf2, BUFFER_SIZE, 0);
+        memset(buff_read, '\0', BUFFER_SIZE);
+        /* ssize_t r =  */pread(fd, buff_read, BUFFER_SIZE, 0);
         for (int i=0; i<PKTS_PER_BUFFER; i++) {
-            if (buf2[i*PKT_BUFFER_SIZE] == '\0')
+            if (buff_read[i*PKT_BUFFER_SIZE] == '\0')
                 continue;
             uint64_t now = get_nsecs();
             // Extract data from packet
             struct Payload pl;
-            memcpy(&pl, buf2+i*PKT_BUFFER_SIZE, sizeof(struct Payload));
+            memcpy(&pl, buff_read+i*PKT_BUFFER_SIZE, sizeof(struct Payload));
             /* Check packet */
             if (pl.client_uid!=0 && pl.type==PL_DATA && pl.created_time!=0) {
                 // pl.us_time_arrival_1 = now;
@@ -132,9 +132,11 @@ int main(int argc, char **argv) {
                 } else {
                     printf("Something wrong [%lu]: pl.uid <MAX_LOG_ENTRY && pl.uid >= 0\n", pl.uid);
                 }
+            } else {
+                printf("pl.client_uid[%lu], pl.type[%lu], pl.created_time[%lu]\n", pl.client_uid, pl.type, pl.created_time);
             }
         }
-        usleep(1);
+        // usleep(1);
     }
 
     /* Export log to text file */

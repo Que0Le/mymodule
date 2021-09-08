@@ -77,57 +77,56 @@ int xdp_sock_prog(struct xdp_md *ctx)
         return XDP_PASS;
     }
     /* End parsing */
-    // bpf_printk("test: %d, port: %u\n", data_end-data, bpf_ntohs(udphdr->dest));
 
     /*  */
-    // if (data_end >= data + 106) {
-        if (data_end >= data+42+sizeof(struct Payload)) {
-            struct Payload *pl;
-            pl = data+42;
-            unsigned long *time_in_map = bpf_map_lookup_elem(&uid_timestamps, &pl->uid);
-            if (time_in_map) {
-                // bpf_printk("!! uid before: %lu\n", *value);
-                *time_in_map = now;
+    if (data_end >= data + 106) {
+    if (data_end >= data+42+sizeof(struct Payload)) {
+        struct Payload *pl;
+        pl = data+42;
+        unsigned long *time_in_map = bpf_map_lookup_elem(&uid_timestamps, &pl->uid);
+        if (time_in_map) {
+            // bpf_printk("!! uid before: %lu\n", *value);
+            *time_in_map = now;
 #ifdef DEBUG_EBPF_INCOMING_PACKETS
-                if (pl->uid % 10 == 0) {
-                    bpf_printk("!! uid[%lu] timestamp after : %lu\n", pl->uid, *time_in_map);
-                }
+            if (pl->uid % 10 == 0) {
+                bpf_printk("!! uid[%lu] timestamp after : %lu\n", pl->uid, *time_in_map);
+            }
 #endif
-            }
+        }
 
-            /* Copying payload data*/
-            /* 
-            // This is one way to do that ...
-            struct Payload *pl_in_map;
-            pl_in_map = bpf_map_lookup_elem(&pkt_payload, &pl->uid);
-            if (pl_in_map) {
-                memcpy(pl_in_map, data+42, sizeof(struct Payload));
-                struct Payload *pl_temp = bpf_map_lookup_elem(&pkt_payload, &pl->uid);
-                if (pl_temp)
-                    bpf_printk("!! uid[%lu] memcpied in map!\n", pl_temp->uid);
-            }    
-            */
-            // The good way is to use update_elem
-            int r = bpf_map_update_elem(&pkt_payload, &pl->uid, pl, BPF_ANY);
-            if (r==-1) {
-                bpf_printk("Failed add to pkt_payload uid[%lu]: ", pl->uid);
-            }
-#ifdef DEBUG_EBPF_INCOMING_PACKETS
-            // Check real value in map. Not important
+        /* Copying payload data*/
+        /* 
+        // This is one way to do that ...
+        struct Payload *pl_in_map;
+        pl_in_map = bpf_map_lookup_elem(&pkt_payload, &pl->uid);
+        if (pl_in_map) {
+            memcpy(pl_in_map, data+42, sizeof(struct Payload));
             struct Payload *pl_temp = bpf_map_lookup_elem(&pkt_payload, &pl->uid);
             if (pl_temp)
                 bpf_printk("!! uid[%lu] memcpied in map!\n", pl_temp->uid);
+        }    
+        */
+        // The good way is to use update_elem
+        int r = bpf_map_update_elem(&pkt_payload, &pl->uid, pl, BPF_ANY);
+        if (r==-1) {
+            bpf_printk("Failed add to pkt_payload uid[%lu]: ", pl->uid);
+        }
+#ifdef DEBUG_EBPF_INCOMING_PACKETS
+        // Check real value in map. Not important
+        struct Payload *pl_temp = bpf_map_lookup_elem(&pkt_payload, &pl->uid);
+        if (pl_temp)
+            bpf_printk("!! uid[%lu] memcpied in map!\n", pl_temp->uid);
 #endif
-            /* Counting */
-            pkt_count = bpf_map_lookup_elem(&xdp_stats_map, &index);
-            if (pkt_count) {
-                (*pkt_count)++;
-            }
-            return XDP_PASS;
+        /* Counting */
+        pkt_count = bpf_map_lookup_elem(&xdp_stats_map, &index);
+        if (pkt_count) {
+            (*pkt_count)++;
         }
         return XDP_PASS;
-    // }
-    // return XDP_PASS;
+    }
+    return XDP_PASS;
+    }
+    return XDP_PASS;
 }
 
 /* 

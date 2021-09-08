@@ -49,10 +49,18 @@ int main() {
     };
 
     unsigned long count_i = 0;
+    unsigned long start = get_nsecs();
+    unsigned long stop = 0;
     while(1) {
 
-        if (uid > MAX_LOG_ENTRY)
+        if (uid > MAX_LOG_ENTRY) {
+            if (stop == 0) {
+                stop = get_nsecs();
+            }
+            unsigned long delta = MAX_LOG_ENTRY/((stop-start)/1000000UL);
+            printf("Rate sent = %lu pkt/ms\n", delta);
             usleep(100*1000);
+        }
         /* Prepare payload */
         // bzero(buffer, PAYLOAD_SIZE);
 
@@ -84,7 +92,11 @@ int main() {
         //             &len);
         // buffer[n] = '\0';
         // printf("Server : %s\n", buffer);
-        // usleep(100);
+
+        if (count_i % CLIENT_RATE==0)
+            usleep(1);
+        count_i+=1;
+
     }
 
     close(sockfd);
