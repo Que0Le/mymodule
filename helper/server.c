@@ -1,3 +1,5 @@
+// #define _GNU_SOURCE             /* See feature_test_macros(7) */
+// #include <sched.h>
 // Server side implementation of UDP client-server model
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,8 +34,13 @@ static unsigned long get_nsecs(void)
 
 #define MAXLINE 1024
   
-// Driver code
 int main(int argc, char *argv[]) {
+    /*  */
+    // cpu_set_t set;
+    // CPU_ZERO(&set);        // clear cpu mask
+    // CPU_SET(1, &set);      // set cpu 0
+    // sched_setaffinity(0, sizeof(cpu_set_t), &set);  // 0 is the calling process
+
     if (argc!=2) {
         printf("Specify log output!\n");
         exit(EXIT_FAILURE);

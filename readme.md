@@ -23,6 +23,8 @@ cd /home/que/Desktop/mymodule
 scp -r -i ~/.ssh/id_rsa que@192.168.1.11:Desktop/mymodule/* /home/que/Desktop/mymodule/
 ## or
 rsync -avIL -e "ssh -i ~/.ssh/id_rsa" --exclude-from="rsync-exclude.txt" que@192.168.1.12:Desktop/mymodule/* /home/que/Desktop/mymodule/
+## or 
+rsync -avIL -e "ssh -i ~/.ssh/id_rsa" --exclude-from="rsync-only-km.txt" que@192.168.1.12:Desktop/mymodule/* /home/que/Desktop/mymodule/
 # Copy logs from run machine
 scp -r -i ~/.ssh/id_rsa /home/que/Desktop/mymodule/logs/*.txt que@192.168.1.12:Desktop/mymodule/logs/
 # Compile and run module
@@ -33,6 +35,7 @@ sudo insmod intercept-module.ko
 gcc -Wall user-processing.c -o user
 sudo ./user
 
+make sc; make kmupc; make kmc; make s && make kmup && make km
 
 ### Copy logs to dev machine
 scp -r -i ~/.ssh/id_rsa /home/que/Desktop/mymodule/logs/*.txt que@192.168.1.11:Desktop/mymodule/logs/ 
@@ -114,7 +117,7 @@ sudo ./xdp_measure_user -d ens33 --filename xdp_measure_kern.o
 ```bash
 sudo ./ebpf_measure_user -d ens33 --filename ebpf_measure_kern.o
 # Insert xdp kern program
-sudo ip link set dev ens33 xdp obj ebpf_measure_kern.o
+sudo ip link set dev ens33 xdp obj ebpf_measure_kern.o sec xdp_sock
 # or 
 ip -force link set dev ens33 xdp obj ebpf_measure_kern.o
 # force remove xdp program

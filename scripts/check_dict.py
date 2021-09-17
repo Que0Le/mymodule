@@ -70,6 +70,11 @@ diff_usebpf_ebpf = [0] * len(thresholds)
 diff_s_ebpf = [0] * len(thresholds)
 diff_s_usebpf = [0] * len(thresholds)
 
+diffs_count_in_threshold_ranges = [
+    diff_up_km, diff_s_km, diff_s_up,
+    diff_usebpf_ebpf, diff_s_ebpf, diff_s_usebpf
+]
+
 km_log = []
 up_log = []
 km_s_log = []
@@ -112,17 +117,27 @@ logs = [km_log, up_log, km_s_log, ebpf_s_log, ebpf_log, usebpf_log]
 logs_label = ["km_log", "up_log", "km_s_log", "ebpf_s_log", "ebpf_log", "usebpf_log"]
 logs_zeroed = [0] * len(logs)
 ###
-diffs_up_km = [0] * len(km_log)
-diffs_s_km = [0] * len(km_log)
-diffs_s_up = [0] * len(km_log)
+# diffs_up_km = [0] * len(km_log)
+# diffs_s_km = [0] * len(km_log)
+# diffs_s_up = [0] * len(km_log)
+count_diffs_up_km = {}
+count_diffs_s_km = {}
+count_diffs_s_up = {}
 
-diffs_usebpf_ebpf = [0] * len(km_log)
-diffs_s_ebpf = [0] * len(km_log)
-diffs_s_usebpf = [0] * len(km_log)
+# diffs_usebpf_ebpf = [0] * len(km_log)
+# diffs_s_ebpf = [0] * len(km_log)
+# diffs_s_usebpf = [0] * len(km_log)
+count_diffs_usebpf_ebpf = {}
+count_diffs_s_ebpf = {}
+count_diffs_s_usebpf = {}
 
-diffs = [diffs_up_km, diffs_s_km, diffs_s_up, diffs_usebpf_ebpf, diffs_s_ebpf, diffs_s_usebpf]
+count_diffs = [
+    count_diffs_up_km, count_diffs_s_km, count_diffs_s_up, 
+    count_diffs_usebpf_ebpf, count_diffs_s_ebpf, count_diffs_s_usebpf
+]
+# diffs = [diffs_up_km, diffs_s_km, diffs_s_up, diffs_usebpf_ebpf, diffs_s_ebpf, diffs_s_usebpf]
 diffs_label = ["diffs_up_km", "diffs_s_km", "diffs_s_up", "diffs_usebpf_ebpf", "diffs_s_ebpf", "diffs_s_usebpf"]
-diffs_neg = [0] * len(diffs)
+diffs_zeroed = [0] * len(diffs_label)
 
 for i in range(0, len(km_log)):
     ### Check zero
@@ -132,122 +147,90 @@ for i in range(0, len(km_log)):
     ### Cal diffs
     d_up_km         = up_log[i] - km_log[i]
     if d_up_km<0:
-        diffs_neg[0] += 1
-    elif (up_log[i]!=0 and km_log[i]!=0):
-        diffs_up_km[i] = d_up_km
+        diffs_zeroed[0] += 1
+    # elif (up_log[i]!=0 and km_log[i]!=0):
+    #     diffs_up_km[i] = d_up_km
+    g = count_diffs_up_km.get(d_up_km)
+    if g:
+        count_diffs_up_km[d_up_km] = g+1
+    else:
+        count_diffs_up_km[d_up_km] = 1
     #
     d_s_km          = km_s_log[i] - km_log[i]
     if d_s_km<0:
-        diffs_neg[1] += 1
-    elif (km_s_log[i]!=0 and km_log[i]!=0):
-        diffs_s_km[i] = d_s_km
+        diffs_zeroed[1] += 1
+    # elif (km_s_log[i]!=0 and km_log[i]!=0):
+    #     diffs_s_km[i] = d_s_km
+    g = count_diffs_s_km.get(d_s_km)
+    if g:
+        count_diffs_s_km[d_s_km] = g+1
+    else:
+        count_diffs_s_km[d_s_km] = 1
     #
     d_s_up          = km_s_log[i] - up_log[i]
     if d_s_up<0:
-        diffs_neg[2] += 1
-    elif (km_s_log[i]!=0 and up_log[i]!=0):
-        diffs_s_up[i] = d_s_up
+        diffs_zeroed[2] += 1
+    # elif (km_s_log[i]!=0 and up_log[i]!=0):
+    #     diffs_s_up[i] = d_s_up
+    g = count_diffs_s_up.get(d_s_up)
+    if g:
+        count_diffs_s_up[d_s_up] = g+1
+    else:
+        count_diffs_s_up[d_s_up] = 1
     #
     d_usebpf_ebpf   = usebpf_log[i] - ebpf_log[i]
     if d_usebpf_ebpf<0:
-        diffs_neg[3] += 1
-    elif (usebpf_log[i]!=0 and ebpf_log[i]!=0):
-        diffs_usebpf_ebpf[i] = d_usebpf_ebpf
+        diffs_zeroed[3] += 1
+    # elif (usebpf_log[i]!=0 and ebpf_log[i]!=0):
+    #     diffs_usebpf_ebpf[i] = d_usebpf_ebpf
+    g = count_diffs_usebpf_ebpf.get(d_usebpf_ebpf)
+    if g:
+        count_diffs_usebpf_ebpf[d_usebpf_ebpf] = g+1
+    else:
+        count_diffs_usebpf_ebpf[d_usebpf_ebpf] = 1
     #
     d_s_ebpf        = ebpf_s_log[i] - ebpf_log[i]
     if d_s_ebpf<0:
-        diffs_neg[4] += 1
-    elif (ebpf_s_log[i]!=0 and ebpf_log[i]!=0):
-        diffs_s_ebpf[i] = d_s_ebpf
+        diffs_zeroed[4] += 1
+    g = count_diffs_s_ebpf.get(d_s_ebpf)
+    if g:
+        count_diffs_s_ebpf[d_s_ebpf] = g+1
+    else:
+        count_diffs_s_ebpf[d_s_ebpf] = 1
     #
     d_s_usebpf      = ebpf_s_log[i] - usebpf_log[i]
     if d_s_ebpf<0:
-        diffs_neg[5] += 1
-    elif (ebpf_s_log[i]!=0 and usebpf_log[i]!=0):
-        diffs_s_usebpf[i] = d_s_usebpf
+        diffs_zeroed[5] += 1
+    g = count_diffs_s_usebpf.get(d_s_usebpf)
+    if g:
+        count_diffs_s_usebpf[d_s_usebpf] = g+1
+    else:
+        count_diffs_s_usebpf[d_s_usebpf] = 1
     #
 
 print("#################")
-print("Log entry Zeroed: ")
+print("Zeroed: ")
 for i in range(0, len(logs_zeroed)):
     print(f"{str(logs_label[i])}: {str(logs_zeroed[i])}")
 print("#################")
-print("Diff Negatived: ")
-for i in range(0, len(diffs_neg)):
-    print(f"{str(diffs_label[i])}: {str(diffs_neg[i])}")
+print("Negatived: ")
+for i in range(0, len(diffs_zeroed)):
+    print(f"{str(diffs_label[i])}: {str(diffs_zeroed[i])}")
 print("#################")
 print("Max-Min: ")
-for i in range(0, len(diffs_neg)):
-    print(f"{str(diffs_label[i])}: {str(max(diffs[i]))}-{str(min(diffs[i]))}")
+for i in range(0, len(diffs_zeroed)):
+    print(f"{str(diffs_label[i])}: {str(max(diffs_label[i]))}-{str(min(diffs_label[i]))}")
 print("#################")
-# exit()
 
-""" 
-print(len(km_log))
-neg_count_kmup = 0
-up_zero = 0
-km_zeoro = 0
-for i in range(0, len(km_log)):
-    if km_log[i]==0:
-        km_zeoro += 1
-    if up_log[i]==0:
-        up_zero += 1
-    if up_log[i]-km_log[i] < 0:
-        neg_count_kmup += 1
-        print("negative: uid=" + str(i) + " up_log[i]="+str(up_log[i])+ " km_log[i]="+str(km_log[i]))
-    else:
-        diff_up_km.append(up_log[i]-km_log[i])
+for i_cd in range(0, len(count_diffs)):
+    for item in count_diffs[i_cd].items():
+        diff = int(item[0]/to_usec)
+        for i_thres in range(0, len(thresholds)):
+            if (diff >= v*thresholds[i_thres][0]) and (diff < v*thresholds[i_thres][1]):
+                diffs_count_in_threshold_ranges[i_cd][i_thres] += item[1]
+                break
+            
 
-print("neg_count_kmup: " + str(neg_count_kmup))
-print("up_zero: " + str(up_zero))
-print("km_zeoro: " + str(km_zeoro))
-print("diff_up_km avg: " + str(sum(diff_up_km)/len(diff_up_km)))
-
-print(len(usebpf_log))
-neg_count = 0
-usebpf_zero = 0
-ebpf_zeoro = 0
-for i in range(0, len(ebpf_log)):
-    if usebpf_log[i]==0:
-        usebpf_zero += 1
-    if ebpf_log[i]==0:
-        ebpf_zeoro += 1
-    if usebpf_log[i]-ebpf_log[i] < 0:
-        neg_count += 1
-        print("negative: uid=" + str(i) + " usebpf_log[i]="+str(usebpf_log[i])+ " ebpf_log[i]="+str(ebpf_log[i]))
-    else:
-        diff_usebpf_ebpf.append(usebpf_log[i]-ebpf_log[i])
-
-print("neg_count: " + str(neg_count))
-print("usebpf_zero: " + str(usebpf_zero))
-print("ebpf_zeoro: " + str(ebpf_zeoro))
-print("diff_usebpf_ebpf avg: " + str(sum(diff_usebpf_ebpf)/len(diff_usebpf_ebpf)))
-exit
-"""
-
-for i in range(0, len(km_log)):
-    d_up_km = int(diffs_up_km[i]/to_usec)
-    d_s_km = int(diffs_s_km[i]/to_usec)
-    d_s_up = int(diffs_s_up[i]/to_usec)
-
-    d_usebpf_ebpf = int(diffs_usebpf_ebpf[i]/to_usec)
-    d_s_ebpf = int(diffs_s_ebpf[i]/to_usec)
-    d_s_usebpf = int(diffs_s_usebpf[i]/to_usec)
-
-    for j in range(0, len(thresholds)):
-        if diffs_up_km[i]!=0 and (d_up_km >= v*thresholds[j][0]) and (d_up_km < v*thresholds[j][1]):
-            diff_up_km[j] += 1
-        if diffs_s_km[i]!=0 and (d_s_km >= v*thresholds[j][0]) and (d_s_km < v*thresholds[j][1]):
-            diff_s_km[j] += 1
-        if diffs_s_up[i]!=0 and (d_s_up >= v*thresholds[j][0]) and (d_s_up < v*thresholds[j][1]):
-            diff_s_up[j] += 1
-        ##
-        if diffs_usebpf_ebpf[i]!=0 and (d_usebpf_ebpf >= v*thresholds[j][0]) and (d_usebpf_ebpf < v*thresholds[j][1]):
-            diff_usebpf_ebpf[j] += 1
-        if diffs_s_ebpf[i]!=0 and (d_s_ebpf >= v*thresholds[j][0]) and (d_s_ebpf < v*thresholds[j][1]):
-            diff_s_ebpf[j] += 1
-        if diffs_s_usebpf[i]!=0 and (d_s_usebpf >= v*thresholds[j][0]) and (d_s_usebpf < v*thresholds[j][1]):
-            diff_s_usebpf[j] += 1
 
 print("diff_up_km")
 print(diff_up_km)

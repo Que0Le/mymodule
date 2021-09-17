@@ -1,3 +1,5 @@
+// #define _GNU_SOURCE             /* See feature_test_macros(7) */
+// #include <sched.h>
 /* https://cirosantilli.com/linux-kernel-module-cheat#mmap */
 
 #define _XOPEN_SOURCE 700
@@ -36,6 +38,14 @@ static unsigned long get_nsecs(void)
 }
 
 int main(int argc, char **argv) {
+
+    /*  */
+    // cpu_set_t set;
+    // CPU_ZERO(&set);        // clear cpu mask
+    // CPU_SET(2, &set);      // set cpu 0
+    // sched_setaffinity(0, sizeof(cpu_set_t), &set);  // 0 is the calling process
+
+
     int fd;
     long page_size;
     char *address1/* , *address2 */;
