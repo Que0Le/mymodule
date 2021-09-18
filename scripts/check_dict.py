@@ -71,8 +71,8 @@ km_log = []
 up_log = []
 km_s_log = []
 ebpf_log = []
-ebpf_s_log = []
 usebpf_log = []
+ebpf_s_log = []
 
 """ Open logs and load data """
 with open(path_km) as km_log_f:
@@ -88,12 +88,12 @@ with open(path_km_server_linuxsocket) as km_s_log_f:
 with open(path_ebpf_kern) as ebpf_log_f:
     for line in ebpf_log_f:
         ebpf_log.append(int(line))
-with open(path_ebpf_server_linuxsocket) as ebpf_s_log_f:
-    for line in ebpf_s_log_f:
-        ebpf_s_log.append(int(line))
 with open(path_ebpf_us) as usebpf_log_f:
     for line in usebpf_log_f:
         usebpf_log.append(int(line))
+with open(path_ebpf_server_linuxsocket) as ebpf_s_log_f:
+    for line in ebpf_s_log_f:
+        ebpf_s_log.append(int(line))
 
 """ Check lengths """
 if len(km_log)!=len(up_log) or \
@@ -105,8 +105,8 @@ if len(km_log)!=len(up_log) or \
     exit()
 
 """ Check data correctness """
-logs = [km_log, up_log, km_s_log, ebpf_log, ebpf_s_log, usebpf_log]
-logs_label = ["km_log", "up_log", "km_s_log", "ebpf_log", "ebpf_s_log", "usebpf_log"]
+logs = [km_log, up_log, km_s_log, ebpf_log, usebpf_log, ebpf_s_log]
+logs_label = ["km_log", "up_log", "km_s_log", "ebpf_log", "usebpf_log", "ebpf_s_log"]
 logs_zeroed = [0] * len(logs)
 ###
 # diffs_up_km = [0] * len(km_log)
@@ -135,20 +135,20 @@ diffs_label = [
 diffs_neg = [0] * len(diffs_label)
 
 """ 
-km_log = []0
-up_log = []1
-km_s_log = []2
-ebpf_s_log = []3
-ebpf_log = []4
-usebpf_log = []5
- """
+km_log = []
+up_log = []
+km_s_log = []
+ebpf_log = []
+usebpf_log = []
+ebpf_s_log = []
+"""
 to_subtract = [
     (1,0), # up_log - km_log
     (2,0), # km_s_log - km_log
     (2,1), # km_s_log - up_log
-    (4,3), # ebpf_log - 
-    (5,3), #
-    (5,4), #
+    (4,3), # usebpf_log - ebpf_log
+    (5,3), # ebpf_s_log - ebpf_log
+    (5,4), # ebpf_s_log - usebpf_log
 ]
 """ Calculate the diffs """
 for i in range(0, len(km_log)):
@@ -162,6 +162,7 @@ for i in range(0, len(km_log)):
         d = logs[pair[0]][i] - logs[pair[1]][i]
         # Check neg
         if d<0:
+            print(f"{diffs_label[pair_th]} {d}")
             diffs_neg[pair_th] += 1
         # Add to counter
         g = count_diffs[pair_th].get(d)
@@ -172,17 +173,17 @@ for i in range(0, len(km_log)):
 
 print("#################")
 print("Zeroed: ")
-for i in range(0, len(logs_zeroed)):
+for i in range(0, len(diffs_label)):
     if logs_zeroed[i] != 0:
         print(f"{str(logs_label[i])}: {str(logs_zeroed[i])}")
 print("#################")
 print("Negatived: ")
-for i in range(0, len(diffs_neg)):
+for i in range(0, len(diffs_label)):
     if diffs_neg[i] != 0:
         print(f"{str(diffs_label[i])}: {str(diffs_neg[i])}")
 print("#################")
 print("Max-Min: ")
-for i in range(0, len(diffs_neg)):
+for i in range(0, len(diffs_label)):
     print(f"{str(diffs_label[i])}: {str(max(count_diffs[i].keys()))}-{str(min(count_diffs[i].keys()))}")
 print("#################")
 
@@ -205,6 +206,8 @@ with open("out_range.txt", 'w') as f:
         to_pop = []
         for item in count_diffs[i_cd].items():
             diff = int(item[0]/to_usec)
+            # if item[0]<0:
+            #     print(f"{diffs_label[i]} {item[0]}")
             for i_thres in range(0, len(thresholds)):
                 if (diff >= v*thresholds[i_thres][0]) and (diff < v*thresholds[i_thres][1]):
                     # If value in threshold range, we increase the counter and add this item to pop list
@@ -233,10 +236,10 @@ width = 0.11  # the width of the bars
 
 fig, ax = plt.subplots()
 rects1 = ax.bar(
-    x - 3*width, diff_up_km, width, 
+    x - 3*width, diff_up_km, width,
     label='diff_up_km:')
 rects2 = ax.bar(
-    x - 2*width, diff_usebpf_ebpf, width, 
+    x - 2*width, diff_usebpf_ebpf, width,
     label='diff_usebpf_ebpf:')
 rects3 = ax.bar(
     x - 1**width, diff_s_km, width, 
