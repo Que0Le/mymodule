@@ -35,7 +35,6 @@ to_usec = 1
 v = 1000/to_usec
 
 thresholds = [
-    [-(sys.maxsize-1)/1000, 0],
     [0, 1],
     [1, 2],
     [2, 3],
@@ -57,12 +56,13 @@ thresholds = [
 ]
 labels = []
 for i in range(0, len(thresholds)):
-    if i==0:
-        l = str("-maxsize") + '-' + str(thresholds[i][1])
-    elif i==(len(thresholds)-1):
-        l = str(thresholds[i][0]) + '-' + str("maxsize")
-    else:
-        l = str(thresholds[i][0]) + '-' + str(thresholds[i][1])
+    # if i==0:
+    #     l = str("-maxsize") + '-' + str(thresholds[i][1])
+    # elif i==(len(thresholds)-1):
+    #     l = str(thresholds[i][0]) + '-' + str("maxsize")
+    # else:
+    #     l = str(thresholds[i][0]) + '-' + str(thresholds[i][1])
+    l = str(thresholds[i][0]) + '-' + str(thresholds[i][1])
     labels.append(l)
 
 
@@ -162,7 +162,7 @@ for i in range(0, len(km_log)):
         d = logs[pair[0]][i] - logs[pair[1]][i]
         # Check neg
         if d<0:
-            print(f"{diffs_label[pair_th]} {d}")
+            # print(f"{diffs_label[pair_th]} {d}")
             diffs_neg[pair_th] += 1
         # Add to counter
         g = count_diffs[pair_th].get(d)
@@ -187,6 +187,14 @@ for i in range(0, len(diffs_label)):
     print(f"{str(diffs_label[i])}: {str(max(count_diffs[i].keys()))}-{str(min(count_diffs[i].keys()))}")
 print("#################")
 
+# count_diffs   diffs_label
+for i in range(0, len(diffs_label)):
+    sumary = 0
+    length = 0
+    for key, value in count_diffs[i].items():
+        sumary += key*value
+        length += value
+    print(f"Avg {diffs_label[i]} = {sumary/length}")
 
 diff_up_km = [0] * len(thresholds)
 diff_s_km = [0] * len(thresholds)
@@ -201,13 +209,15 @@ diffs_count_in_threshold_ranges = [
     diff_usebpf_ebpf, diff_s_ebpf, diff_s_usebpf
 ]
 
+""" Export unexpected values to file to evaluate later """
 with open("out_range.txt", 'w') as f:
     for i_cd in range(0, len(count_diffs)):
         to_pop = []
         for item in count_diffs[i_cd].items():
             diff = int(item[0]/to_usec)
-            # if item[0]<0:
-            #     print(f"{diffs_label[i]} {item[0]}")
+            if item[0]<0:
+                s=f"{diffs_label[i]} {item[0]}"
+                print(s)
             for i_thres in range(0, len(thresholds)):
                 if (diff >= v*thresholds[i_thres][0]) and (diff < v*thresholds[i_thres][1]):
                     # If value in threshold range, we increase the counter and add this item to pop list
@@ -220,15 +230,6 @@ with open("out_range.txt", 'w') as f:
         f.write(str(diffs_label[i_cd]) + "\n")
         for key in sorted(count_diffs[i_cd]):
             f.write(f"{key}: {count_diffs[i_cd][key]}\n")
-
-# count_diffs   diffs_label
-for i in range(0, len(diffs_label)):
-    sumary = 0
-    length = 0
-    for k, v in count_diffs[i].items():
-        sumary += k*v
-        length += v
-    print(f"Avg {diffs_label[i]} = {sumary/length}")
 
 """ Plotting """
 x = np.arange(len(labels))  # the label locations
