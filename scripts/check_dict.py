@@ -36,20 +36,24 @@ v = 1000/to_usec
 
 thresholds = [
     [-(sys.maxsize-1)/1000, 0],
-    [0,1],
-    [ 1, 2],
-    [ 2,3 ],
-    [ 3, 4],
-    [ 5,6 ],
-    [ 7, 8],
-    [ 9,10 ],
-    [ 11, 13 ],
-    [ 13, 16 ],
-    [ 16, 19 ],
-    [ 19,20 ],
-    [ 20, 25],
-    [ 25, 30],
-    [ 30, sys.maxsize/1000],
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [3, 4],
+    [4, 5],
+    [5, 6],
+    [6, 7],
+    [7, 8],
+    [8, 9],
+    [9, 10],
+    [10, 11],
+    [11, 13],
+    [13, 16],
+    [16, 19],
+    [19, 23],
+    [23, 27],
+    [27, 32],
+    [32, 40],
 ]
 labels = []
 for i in range(0, len(thresholds)):
@@ -222,14 +226,25 @@ for i in range(0, len(diffs_zeroed)):
     print(f"{str(diffs_label[i])}: {str(max(diffs_label[i]))}-{str(min(diffs_label[i]))}")
 print("#################")
 
-for i_cd in range(0, len(count_diffs)):
-    for item in count_diffs[i_cd].items():
-        diff = int(item[0]/to_usec)
-        for i_thres in range(0, len(thresholds)):
-            if (diff >= v*thresholds[i_thres][0]) and (diff < v*thresholds[i_thres][1]):
-                diffs_count_in_threshold_ranges[i_cd][i_thres] += item[1]
-                break
-            
+with open("out_range.txt", 'w') as f:
+    for i_cd in range(0, len(count_diffs)):
+        to_pop = []
+        for item in count_diffs[i_cd].items():
+            diff = int(item[0]/to_usec)
+            for i_thres in range(0, len(thresholds)):
+                if (diff >= v*thresholds[i_thres][0]) and (diff < v*thresholds[i_thres][1]):
+                    # If value in threshold range, we increase the counter and add this item to pop list
+                    diffs_count_in_threshold_ranges[i_cd][i_thres] += item[1]
+                    to_pop.append(item[0])
+                    break
+        [count_diffs[i_cd].pop(x) for x in to_pop]
+        # After that, this dictionatry should only contain value that are out of threshold (neg, too big, ...)
+        f.write("--------------------------------\n")
+        f.write(str(diffs_label[i_cd]) + "\n")
+        # print(sorted(count_diffs[i_cd]))
+        for key in sorted(count_diffs[i_cd]):
+            f.write(f"{key}: {count_diffs[i_cd][key]}\n")
+            # f.write( "%s: %s" % (key, count_diffs[i_cd][key]))
 
 
 print("diff_up_km")
