@@ -192,6 +192,8 @@ for i in range(0, len(diffs_label)):
     sumary = 0
     length = 0
     for key, value in count_diffs[i].items():
+        if key<0 or key>100000:
+            continue
         sumary += key*value
         length += value
     print(f"Avg {diffs_label[i]} = {sumary/length}")
@@ -215,9 +217,6 @@ with open("out_range.txt", 'w') as f:
         to_pop = []
         for item in count_diffs[i_cd].items():
             diff = int(item[0]/to_usec)
-            if item[0]<0:
-                s=f"{diffs_label[i]} {item[0]}"
-                print(s)
             for i_thres in range(0, len(thresholds)):
                 if (diff >= v*thresholds[i_thres][0]) and (diff < v*thresholds[i_thres][1]):
                     # If value in threshold range, we increase the counter and add this item to pop list
