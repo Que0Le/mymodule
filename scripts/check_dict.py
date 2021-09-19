@@ -152,13 +152,22 @@ to_subtract = [
 ]
 """ Calculate the diffs """
 for i in range(0, len(km_log)):
-    ### Check zero
-    for j in range(0, len(logs)):
-        if logs[j][i] == 0:
-            logs_zeroed[j] = logs_zeroed[j] + 1
+    # for j in range(0, len(logs)):
+    #     if logs[j][i] == 0:
+    #         logs_zeroed[j] = logs_zeroed[j] + 1
     ### Cal diffs
     for pair_th in range(0, len(to_subtract)):
         pair = to_subtract[pair_th]
+        ### Check zero
+        z = 0
+        if logs[pair[0]][i]==0:
+            logs_zeroed[pair[0]] = logs_zeroed[pair[0]] + 1
+            z+=1
+        if logs[pair[1]][i]==0:
+            logs_zeroed[pair[1]] = logs_zeroed[pair[1]] + 1
+            z+=1
+        if z!=0:
+            continue    # No need to calculate diff because one of the measurement is zero
         d = logs[pair[0]][i] - logs[pair[1]][i]
         # Check neg
         if d<0:
@@ -170,6 +179,8 @@ for i in range(0, len(km_log)):
             count_diffs[pair_th][d] = g+1
         else:
             count_diffs[pair_th][d] = 1
+# Because each zero value is counted twice, we modify them to correct value
+logs_zeroed = list(map(lambda v: int(v/2), logs_zeroed))
 
 print("#################")
 print("Zeroed: ")
