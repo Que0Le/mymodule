@@ -152,9 +152,6 @@ to_subtract = [
 ]
 """ Calculate the diffs """
 for i in range(0, len(km_log)):
-    # for j in range(0, len(logs)):
-    #     if logs[j][i] == 0:
-    #         logs_zeroed[j] = logs_zeroed[j] + 1
     ### Cal diffs
     for pair_th in range(0, len(to_subtract)):
         pair = to_subtract[pair_th]
@@ -203,8 +200,8 @@ for i in range(0, len(diffs_label)):
     sumary = 0
     length = 0
     for key, value in count_diffs[i].items():
-        if key<0 or key>100000:
-            continue
+        # if key<0 or key>100000:
+        #     continue
         sumary += key*value
         length += value
     print(f"Avg {diffs_label[i]} = {sumary/length}")
@@ -253,7 +250,7 @@ rects2 = ax.bar(
     x - 2*width, diff_usebpf_ebpf, width,
     label='diff_usebpf_ebpf:')
 rects3 = ax.bar(
-    x - 1**width, diff_s_km, width, 
+    x - 1*width, diff_s_km, width, 
     label='diff_s_km')
 #
 rects4 = ax.bar(

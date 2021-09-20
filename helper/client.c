@@ -93,7 +93,7 @@ int main() {
         // buffer[n] = '\0';
         // printf("Server : %s\n", buffer);
 
-        if (count_i % CLIENT_RATE==0)
+        if ((CLIENT_RATE != 0) && (count_i % CLIENT_RATE == 0))
             usleep(1);
         count_i+=1;
 
