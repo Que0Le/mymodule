@@ -35,47 +35,44 @@ to_usec = 1
 v = 1000/to_usec
 
 thresholds = [
-    [-(sys.maxsize-1)/1000, 0],
-    [0,1],
-    [ 1, 2],
-    [ 2,3 ],
-    [ 3, 4],
-    [ 5,6 ],
-    [ 7, 8],
-    [ 9,10 ],
-    [ 11, 13 ],
-    [ 13, 16 ],
-    [ 16, 19 ],
-    [ 19,20 ],
-    [ 20, 25],
-    [ 25, 30],
-    [ 30, sys.maxsize/1000],
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [3, 4],
+    [4, 5],
+    [5, 6],
+    [6, 7],
+    [7, 8],
+    [8, 9],
+    [9, 10],
+    [10, 11],
+    [11, 13],
+    [13, 16],
+    [16, 19],
+    [19, 23],
+    [23, 27],
+    [27, 32],
+    [32, 40],
 ]
 labels = []
 for i in range(0, len(thresholds)):
-    if i==0:
-        l = str("-maxsize") + '-' + str(thresholds[i][1])
-    elif i==(len(thresholds)-1):
-        l = str(thresholds[i][0]) + '-' + str("maxsize")
-    else:
-        l = str(thresholds[i][0]) + '-' + str(thresholds[i][1])
+    # if i==0:
+    #     l = str("-maxsize") + '-' + str(thresholds[i][1])
+    # elif i==(len(thresholds)-1):
+    #     l = str(thresholds[i][0]) + '-' + str("maxsize")
+    # else:
+    #     l = str(thresholds[i][0]) + '-' + str(thresholds[i][1])
+    l = str(thresholds[i][0]) + '-' + str(thresholds[i][1])
     labels.append(l)
 
 
-diff_up_km = [0] * len(thresholds)
-diff_s_km = [0] * len(thresholds)
-diff_s_up = [0] * len(thresholds)
-
-diff_usebpf_ebpf = [0] * len(thresholds)
-diff_s_ebpf = [0] * len(thresholds)
-diff_s_usebpf = [0] * len(thresholds)
 
 km_log = []
 up_log = []
 km_s_log = []
-ebpf_s_log = []
 ebpf_log = []
 usebpf_log = []
+ebpf_s_log = []
 
 """ Open logs and load data """
 with open(path_km) as km_log_f:
@@ -88,15 +85,15 @@ with open(path_km_server_linuxsocket) as km_s_log_f:
     for line in km_s_log_f:
         km_s_log.append(int(line))
 # #
-with open(path_ebpf_server_linuxsocket) as ebpf_s_log_f:
-    for line in ebpf_s_log_f:
-        ebpf_s_log.append(int(line))
 with open(path_ebpf_kern) as ebpf_log_f:
     for line in ebpf_log_f:
         ebpf_log.append(int(line))
 with open(path_ebpf_us) as usebpf_log_f:
     for line in usebpf_log_f:
         usebpf_log.append(int(line))
+with open(path_ebpf_server_linuxsocket) as ebpf_s_log_f:
+    for line in ebpf_s_log_f:
+        ebpf_s_log.append(int(line))
 
 """ Check lengths """
 if len(km_log)!=len(up_log) or \
@@ -108,172 +105,138 @@ if len(km_log)!=len(up_log) or \
     exit()
 
 """ Check data correctness """
-logs = [km_log, up_log, km_s_log, ebpf_s_log, ebpf_log, usebpf_log]
-logs_label = ["km_log", "up_log", "km_s_log", "ebpf_s_log", "ebpf_log", "usebpf_log"]
+logs = [km_log, up_log, km_s_log, ebpf_log, usebpf_log, ebpf_s_log]
+logs_label = ["km_log", "up_log", "km_s_log", "ebpf_log", "usebpf_log", "ebpf_s_log"]
 logs_zeroed = [0] * len(logs)
 ###
-diffs_up_km = [0] * len(km_log)
-diffs_s_km = [0] * len(km_log)
-diffs_s_up = [0] * len(km_log)
+# diffs_up_km = [0] * len(km_log)
+# diffs_s_km = [0] * len(km_log)
+# diffs_s_up = [0] * len(km_log)
+count_diffs_up_km = {}
+count_diffs_s_km = {}
+count_diffs_s_up = {}
 
-diffs_usebpf_ebpf = [0] * len(km_log)
-diffs_s_ebpf = [0] * len(km_log)
-diffs_s_usebpf = [0] * len(km_log)
+# diffs_usebpf_ebpf = [0] * len(km_log)
+# diffs_s_ebpf = [0] * len(km_log)
+# diffs_s_usebpf = [0] * len(km_log)
+count_diffs_usebpf_ebpf = {}
+count_diffs_s_ebpf = {}
+count_diffs_s_usebpf = {}
 
-diffs = [diffs_up_km, diffs_s_km, diffs_s_up, diffs_usebpf_ebpf, diffs_s_ebpf, diffs_s_usebpf]
-diffs_label = ["diffs_up_km", "diffs_s_km", "diffs_s_up", "diffs_usebpf_ebpf", "diffs_s_ebpf", "diffs_s_usebpf"]
-diffs_neg = [0] * len(diffs)
-
-for i in range(0, len(km_log)):
-    ### Check zero
-    for j in range(0, len(logs)):
-        if logs[j][i] == 0:
-            logs_zeroed[j] = logs_zeroed[j] + 1
-    ### Cal diffs
-    d_up_km         = up_log[i] - km_log[i]
-    if d_up_km<0:
-        diffs_neg[0] += 1
-    elif (up_log[i]!=0 and km_log[i]!=0):
-        diffs_up_km[i] = d_up_km
-    #
-    d_s_km          = km_s_log[i] - km_log[i]
-    if d_s_km<0:
-        diffs_neg[1] += 1
-    elif (km_s_log[i]!=0 and km_log[i]!=0):
-        diffs_s_km[i] = d_s_km
-    #
-    d_s_up          = km_s_log[i] - up_log[i]
-    if d_s_up<0:
-        diffs_neg[2] += 1
-    elif (km_s_log[i]!=0 and up_log[i]!=0):
-        diffs_s_up[i] = d_s_up
-    #
-    d_usebpf_ebpf   = usebpf_log[i] - ebpf_log[i]
-    if d_usebpf_ebpf<0:
-        diffs_neg[3] += 1
-    elif (usebpf_log[i]!=0 and ebpf_log[i]!=0):
-        diffs_usebpf_ebpf[i] = d_usebpf_ebpf
-    #
-    d_s_ebpf        = ebpf_s_log[i] - ebpf_log[i]
-    if d_s_ebpf<0:
-        diffs_neg[4] += 1
-    elif (ebpf_s_log[i]!=0 and ebpf_log[i]!=0):
-        diffs_s_ebpf[i] = d_s_ebpf
-    #
-    d_s_usebpf      = ebpf_s_log[i] - usebpf_log[i]
-    if d_s_ebpf<0:
-        diffs_neg[5] += 1
-    elif (ebpf_s_log[i]!=0 and usebpf_log[i]!=0):
-        diffs_s_usebpf[i] = d_s_usebpf
-    #
-
-print("#################")
-print("Log entry Zeroed: ")
-for i in range(0, len(logs_zeroed)):
-    print(f"{str(logs_label[i])}: {str(logs_zeroed[i])}")
-print("#################")
-print("Diff Negatived: ")
-for i in range(0, len(diffs_neg)):
-    print(f"{str(diffs_label[i])}: {str(diffs_neg[i])}")
-print("#################")
-print("Max-Min: ")
-for i in range(0, len(diffs_neg)):
-    print(f"{str(diffs_label[i])}: {str(max(diffs[i]))}-{str(min(diffs[i]))}")
-print("#################")
-# exit()
+count_diffs = [
+    count_diffs_up_km, count_diffs_s_km, count_diffs_s_up, 
+    count_diffs_usebpf_ebpf, count_diffs_s_ebpf, count_diffs_s_usebpf
+]
+# diffs = [diffs_up_km, diffs_s_km, diffs_s_up, diffs_usebpf_ebpf, diffs_s_ebpf, diffs_s_usebpf]
+diffs_label = [
+    "diffs_up_km", "diffs_s_km", "diffs_s_up", 
+    "diffs_usebpf_ebpf", "diffs_s_ebpf", "diffs_s_usebpf"
+]
+diffs_neg = [0] * len(diffs_label)
 
 """ 
-print(len(km_log))
-neg_count_kmup = 0
-up_zero = 0
-km_zeoro = 0
-for i in range(0, len(km_log)):
-    if km_log[i]==0:
-        km_zeoro += 1
-    if up_log[i]==0:
-        up_zero += 1
-    if up_log[i]-km_log[i] < 0:
-        neg_count_kmup += 1
-        print("negative: uid=" + str(i) + " up_log[i]="+str(up_log[i])+ " km_log[i]="+str(km_log[i]))
-    else:
-        diff_up_km.append(up_log[i]-km_log[i])
-
-print("neg_count_kmup: " + str(neg_count_kmup))
-print("up_zero: " + str(up_zero))
-print("km_zeoro: " + str(km_zeoro))
-print("diff_up_km avg: " + str(sum(diff_up_km)/len(diff_up_km)))
-
-print(len(usebpf_log))
-neg_count = 0
-usebpf_zero = 0
-ebpf_zeoro = 0
-for i in range(0, len(ebpf_log)):
-    if usebpf_log[i]==0:
-        usebpf_zero += 1
-    if ebpf_log[i]==0:
-        ebpf_zeoro += 1
-    if usebpf_log[i]-ebpf_log[i] < 0:
-        neg_count += 1
-        print("negative: uid=" + str(i) + " usebpf_log[i]="+str(usebpf_log[i])+ " ebpf_log[i]="+str(ebpf_log[i]))
-    else:
-        diff_usebpf_ebpf.append(usebpf_log[i]-ebpf_log[i])
-
-print("neg_count: " + str(neg_count))
-print("usebpf_zero: " + str(usebpf_zero))
-print("ebpf_zeoro: " + str(ebpf_zeoro))
-print("diff_usebpf_ebpf avg: " + str(sum(diff_usebpf_ebpf)/len(diff_usebpf_ebpf)))
-exit
+km_log = []
+up_log = []
+km_s_log = []
+ebpf_log = []
+usebpf_log = []
+ebpf_s_log = []
 """
-
+to_subtract = [
+    (1,0), # up_log - km_log
+    (2,0), # km_s_log - km_log
+    (2,1), # km_s_log - up_log
+    (4,3), # usebpf_log - ebpf_log
+    (5,3), # ebpf_s_log - ebpf_log
+    (5,4), # ebpf_s_log - usebpf_log
+]
+""" Calculate the diffs """
 for i in range(0, len(km_log)):
-    d_up_km = int(diffs_up_km[i]/to_usec)
-    d_s_km = int(diffs_s_km[i]/to_usec)
-    d_s_up = int(diffs_s_up[i]/to_usec)
+    ### Cal diffs
+    for pair_th in range(0, len(to_subtract)):
+        pair = to_subtract[pair_th]
+        ### Check zero
+        z = 0
+        if logs[pair[0]][i]==0:
+            logs_zeroed[pair[0]] = logs_zeroed[pair[0]] + 1
+            z+=1
+        if logs[pair[1]][i]==0:
+            logs_zeroed[pair[1]] = logs_zeroed[pair[1]] + 1
+            z+=1
+        if z!=0:
+            continue    # No need to calculate diff because one of the measurement is zero
+        d = logs[pair[0]][i] - logs[pair[1]][i]
+        # Check neg
+        if d<0:
+            # print(f"{diffs_label[pair_th]} {d}")
+            diffs_neg[pair_th] += 1
+        # Add to counter
+        g = count_diffs[pair_th].get(d)
+        if g:
+            count_diffs[pair_th][d] = g+1
+        else:
+            count_diffs[pair_th][d] = 1
+# Because each zero value is counted twice, we modify them to correct value
+logs_zeroed = list(map(lambda v: int(v/2), logs_zeroed))
 
-    d_usebpf_ebpf = int(diffs_usebpf_ebpf[i]/to_usec)
-    d_s_ebpf = int(diffs_s_ebpf[i]/to_usec)
-    d_s_usebpf = int(diffs_s_usebpf[i]/to_usec)
+print("#################")
+print("Zeroed: ")
+for i in range(0, len(diffs_label)):
+    if logs_zeroed[i] != 0:
+        print(f"{str(logs_label[i])}: {str(logs_zeroed[i])}")
+print("#################")
+print("Negatived: ")
+for i in range(0, len(diffs_label)):
+    if diffs_neg[i] != 0:
+        print(f"{str(diffs_label[i])}: {str(diffs_neg[i])}")
+print("#################")
+print("Max-Min: ")
+for i in range(0, len(diffs_label)):
+    print(f"{str(diffs_label[i])}: {str(max(count_diffs[i].keys()))}-{str(min(count_diffs[i].keys()))}")
+print("#################")
 
-    for j in range(0, len(thresholds)):
-        if diffs_up_km[i]!=0 and (d_up_km >= v*thresholds[j][0]) and (d_up_km < v*thresholds[j][1]):
-            diff_up_km[j] += 1
-        if diffs_s_km[i]!=0 and (d_s_km >= v*thresholds[j][0]) and (d_s_km < v*thresholds[j][1]):
-            diff_s_km[j] += 1
-        if diffs_s_up[i]!=0 and (d_s_up >= v*thresholds[j][0]) and (d_s_up < v*thresholds[j][1]):
-            diff_s_up[j] += 1
-        ##
-        if diffs_usebpf_ebpf[i]!=0 and (d_usebpf_ebpf >= v*thresholds[j][0]) and (d_usebpf_ebpf < v*thresholds[j][1]):
-            diff_usebpf_ebpf[j] += 1
-        if diffs_s_ebpf[i]!=0 and (d_s_ebpf >= v*thresholds[j][0]) and (d_s_ebpf < v*thresholds[j][1]):
-            diff_s_ebpf[j] += 1
-        if diffs_s_usebpf[i]!=0 and (d_s_usebpf >= v*thresholds[j][0]) and (d_s_usebpf < v*thresholds[j][1]):
-            diff_s_usebpf[j] += 1
+# count_diffs   diffs_label
+for i in range(0, len(diffs_label)):
+    sumary = 0
+    length = 0
+    for key, value in count_diffs[i].items():
+        # if key<0 or key>100000:
+        #     continue
+        sumary += key*value
+        length += value
+    print(f"Avg {diffs_label[i]} = {sumary/length}")
 
-print("diff_up_km")
-print(diff_up_km)
-print(statistics.mean(diff_up_km))
-print(sum(diff_up_km)/len(diff_up_km))
-print("diff_s_km")
-print(diff_s_km)
-print(statistics.mean(diff_s_km))
-print(sum(diff_s_km)/len(diff_s_km))
-print("diff_s_up")
-print(diff_s_up)
-print(statistics.mean(diff_s_up))
-print(sum(diff_s_up)/len(diff_s_up))
-#
-print("diff_usebpf_ebpf")
-print(diff_usebpf_ebpf)
-print(statistics.mean(diff_usebpf_ebpf))
-print(sum(diff_s_up)/len(diff_s_up))
-print("diff_s_ebpf")
-print(diff_s_ebpf)
-print(statistics.mean(diff_s_ebpf))
-print(sum(diff_s_ebpf)/len(diff_s_ebpf))
-print("diff_s_usebpf")
-print(diff_s_usebpf)
-print(statistics.mean(diff_s_usebpf))
-print(sum(diff_s_usebpf)/len(diff_s_usebpf))
+diff_up_km = [0] * len(thresholds)
+diff_s_km = [0] * len(thresholds)
+diff_s_up = [0] * len(thresholds)
+
+diff_usebpf_ebpf = [0] * len(thresholds)
+diff_s_ebpf = [0] * len(thresholds)
+diff_s_usebpf = [0] * len(thresholds)
+
+diffs_count_in_threshold_ranges = [
+    diff_up_km, diff_s_km, diff_s_up,
+    diff_usebpf_ebpf, diff_s_ebpf, diff_s_usebpf
+]
+
+""" Export unexpected values to file to evaluate later """
+with open("out_range.txt", 'w') as f:
+    for i_cd in range(0, len(count_diffs)):
+        to_pop = []
+        for item in count_diffs[i_cd].items():
+            diff = int(item[0]/to_usec)
+            for i_thres in range(0, len(thresholds)):
+                if (diff >= v*thresholds[i_thres][0]) and (diff < v*thresholds[i_thres][1]):
+                    # If value in threshold range, we increase the counter and add this item to pop list
+                    diffs_count_in_threshold_ranges[i_cd][i_thres] += item[1]
+                    to_pop.append(item[0])
+                    break
+        [count_diffs[i_cd].pop(x) for x in to_pop]
+        # After that, this dictionatry should only contain value that are out of threshold (neg, too big, ...)
+        f.write("--------------------------------\n")
+        f.write(str(diffs_label[i_cd]) + "\n")
+        for key in sorted(count_diffs[i_cd]):
+            f.write(f"{key}: {count_diffs[i_cd][key]}\n")
 
 """ Plotting """
 x = np.arange(len(labels))  # the label locations
@@ -281,13 +244,13 @@ width = 0.11  # the width of the bars
 
 fig, ax = plt.subplots()
 rects1 = ax.bar(
-    x - 3*width, diff_up_km, width, 
+    x - 3*width, diff_up_km, width,
     label='diff_up_km:')
 rects2 = ax.bar(
-    x - 2*width, diff_usebpf_ebpf, width, 
+    x - 2*width, diff_usebpf_ebpf, width,
     label='diff_usebpf_ebpf:')
 rects3 = ax.bar(
-    x - 1**width, diff_s_km, width, 
+    x - 1*width, diff_s_km, width, 
     label='diff_s_km')
 #
 rects4 = ax.bar(
