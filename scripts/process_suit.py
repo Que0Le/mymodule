@@ -169,31 +169,8 @@ for test_case in test_cases:
 
         """ Check data correctness """
         logs = [km_log, up_log, km_s_log, ebpf_log, usebpf_log, ebpf_s_log]
-        # logs_label = ["km_log", "up_log", "km_s_log", "ebpf_log", "usebpf_log", "ebpf_s_log"]
         logs_zeroed = [0] * len(logs)
-        # ###
-        # count_diffs_up_km = {}
-        # count_diffs_s_km = {}
-        # count_diffs_usebpf_ebpf = {}
-        # count_diffs_s_ebpf = {}
-
-        # count_diffs = [
-        #     count_diffs_up_km, count_diffs_s_km,
-        #     count_diffs_usebpf_ebpf, count_diffs_s_ebpf, 
-        # ]
-
-        # diffs_label = [
-        #     "diffs_up_km", "diffs_s_km",
-        #     "diffs_usebpf_ebpf", "diffs_s_ebpf",
-        # ]
         diffs_neg = [0] * len(diffs_label)
-
-        # to_subtract = [
-        #     (1,0), # up_log - km_log
-        #     (2,0), # km_s_log - km_log
-        #     (4,3), # usebpf_log - ebpf_log
-        #     (5,3), # ebpf_s_log - ebpf_log
-        # ]
 
         """ Calculate the diffs """
         for i in range(0, len(km_log)):
@@ -214,7 +191,6 @@ for test_case in test_cases:
                 d = logs[pair[0]][i] - logs[pair[1]][i]
                 # Check neg
                 if d<0:
-                    # print(f"{diffs_label[pair_th]} {d}")
                     diffs_neg[pair_th] += 1
                 # Add to counter
                 g = count_diffs[pair_th].get(d)
@@ -224,6 +200,7 @@ for test_case in test_cases:
                     count_diffs[pair_th][d] = 1
 
         # print("#################")
+        logs_zeroed = list(map(lambda v: int(v/2), logs_zeroed))
         print("Zeroed: ")
         for i in range(0, len(diffs_label)):
             if logs_zeroed[i] != 0:
@@ -236,117 +213,90 @@ for test_case in test_cases:
     """ Done collecting data for all iterations """
 
     # Because each zero value is counted twice, we modify them to correct value
-    logs_zeroed = list(map(lambda v: int(v/2), logs_zeroed))
-
-    # print("#################")
-    # print("Zeroed: ")
-    # for i in range(0, len(diffs_label)):
-    #     if logs_zeroed[i] != 0:
-    #         print(f"{str(logs_label[i])}: {str(logs_zeroed[i])}")
-    # print("#################")
-    # print("Negatived: ")
-    # for i in range(0, len(diffs_label)):
-    #     if diffs_neg[i] != 0:
-    #         print(f"{str(diffs_label[i])}: {str(diffs_neg[i])}")
     print("#################")
     print("Max-Min: ")
     for i in range(0, len(diffs_label)):
         print(f"{str(diffs_label[i])}: {str(max(count_diffs[i].keys()))}-{str(min(count_diffs[i].keys()))}")
     print("#################")
 
-    # # count_diffs   diffs_label
-    # for i in range(0, len(diffs_label)):
-    #     sumary = 0
-    #     length = 0
-    #     for key, value in count_diffs[i].items():
-    #         # if key<0 or key>100000:
-    #         #     continue
-    #         sumary += key*value
-    #         length += value
-    #     print(f"Avg {diffs_label[i]} = {sumary/length}")
+    for i in range(0, len(diffs_label)):
+        sumary = 0
+        length = 0
+        for key, value in count_diffs[i].items():
+            sumary += key*value
+            length += value
+        print(f"Avg {diffs_label[i]} = {sumary/length}")
 
-    # diff_up_km = [0] * len(thresholds)
-    # diff_s_km = [0] * len(thresholds)
-    # # diff_s_up = [0] * len(thresholds)
+    diff_up_km = [0] * len(thresholds)
+    diff_s_km = [0] * len(thresholds)
+    diff_usebpf_ebpf = [0] * len(thresholds)
+    diff_s_ebpf = [0] * len(thresholds)
 
-    # diff_usebpf_ebpf = [0] * len(thresholds)
-    # diff_s_ebpf = [0] * len(thresholds)
-    # # diff_s_usebpf = [0] * len(thresholds)
+    diffs_count_in_threshold_ranges = [
+        diff_up_km, diff_s_km, 
+        diff_usebpf_ebpf, diff_s_ebpf, 
+    ]
 
-    # diffs_count_in_threshold_ranges = [
-    #     diff_up_km, diff_s_km, #diff_s_up,
-    #     diff_usebpf_ebpf, diff_s_ebpf, #diff_s_usebpf
-    # ]
+    """ Export unexpected values to file to evaluate later """
+    with open("out_range.txt", 'w') as f:
+        for i_cd in range(0, len(count_diffs)):
+            to_pop = []
+            for item in count_diffs[i_cd].items():
+                diff = int(item[0]/to_usec)
+                for i_thres in range(0, len(thresholds)):
+                    if (diff >= v*thresholds[i_thres][0]) and (diff < v*thresholds[i_thres][1]):
+                        # If value in threshold range, we increase the counter and add this item to pop list
+                        diffs_count_in_threshold_ranges[i_cd][i_thres] += item[1]
+                        to_pop.append(item[0])
+                        break
+            [count_diffs[i_cd].pop(x) for x in to_pop]
+            # After that, this dictionatry should only contain value that are out of threshold (neg, too big, ...)
+            f.write("--------------------------------\n")
+            f.write(str(diffs_label[i_cd]) + "\n")
+            for key in sorted(count_diffs[i_cd]):
+                f.write(f"{key}: {count_diffs[i_cd][key]}\n")
 
-    # """ Export unexpected values to file to evaluate later """
-    # with open("out_range.txt", 'w') as f:
-    #     for i_cd in range(0, len(count_diffs)):
-    #         to_pop = []
-    #         for item in count_diffs[i_cd].items():
-    #             diff = int(item[0]/to_usec)
-    #             for i_thres in range(0, len(thresholds)):
-    #                 if (diff >= v*thresholds[i_thres][0]) and (diff < v*thresholds[i_thres][1]):
-    #                     # If value in threshold range, we increase the counter and add this item to pop list
-    #                     diffs_count_in_threshold_ranges[i_cd][i_thres] += item[1]
-    #                     to_pop.append(item[0])
-    #                     break
-    #         [count_diffs[i_cd].pop(x) for x in to_pop]
-    #         # After that, this dictionatry should only contain value that are out of threshold (neg, too big, ...)
-    #         f.write("--------------------------------\n")
-    #         f.write(str(diffs_label[i_cd]) + "\n")
-    #         for key in sorted(count_diffs[i_cd]):
-    #             f.write(f"{key}: {count_diffs[i_cd][key]}\n")
+    """ Plotting """
+    x = np.arange(len(labels))  # the label locations
+    width = 0.11  # the width of the bars
 
-    # """ Plotting """
-    # x = np.arange(len(labels))  # the label locations
-    # width = 0.11  # the width of the bars
+    fig, ax = plt.subplots()
+    rects1 = ax.bar(
+        x - 3*width, diff_up_km, width,
+        label='diff_up_km:')
+    rects2 = ax.bar(
+        x - 2*width, diff_usebpf_ebpf, width,
+        label='diff_usebpf_ebpf:')
+    rects3 = ax.bar(
+        x - 1*width, diff_s_km, width, 
+        label='diff_s_km')
+    #
+    rects4 = ax.bar(
+        x + 1*width, diff_s_ebpf, width, 
+        label='diff_s_ebpf')
 
-    # fig, ax = plt.subplots()
-    # rects1 = ax.bar(
-    #     x - 3*width, diff_up_km, width,
-    #     label='diff_up_km:')
-    # rects2 = ax.bar(
-    #     x - 2*width, diff_usebpf_ebpf, width,
-    #     label='diff_usebpf_ebpf:')
-    # rects3 = ax.bar(
-    #     x - 1*width, diff_s_km, width, 
-    #     label='diff_s_km')
-    # #
-    # rects4 = ax.bar(
-    #     x + 1*width, diff_s_ebpf, width, 
-    #     label='diff_s_ebpf')
-    # # rects5 = ax.bar(
-    # #     x + 2*width, diff_s_up, width, 
-    # #     label='diff_s_up')
-    # # rects6 = ax.bar(
-    # #     x + 3*width, diff_s_usebpf, width, 
-    # #     label='diff_s_usebpf')
-    # # Add some text for labels, title and custom x-axis tick labels, etc.
-    # if v==1000:
-    #     ax.set_ylabel('Number of packets')
-    #     ax.set_xlabel('Diff in nsec (*1000)')
-    #     ax.set_title('Number of packets received sorted in latency. Total: ' + str(len(km_log)))
-    # elif v==1:
-    #     ax.set_ylabel('Number of packets')
-    #     ax.set_xlabel('Diff in usec')
-    #     ax.set_title('Number of packets received sorted in latency. Total: ' + str(len(km_log)))
+    # Add some text for labels, title and custom x-axis tick labels, etc.
+    ax.set_ylabel('Number of packets')
+    ax.set_title(f"Number of packets received sorted in latency. Total: {str(len(km_log))}*{nbr_iteration} test-runs of test-case {test_case}")
+    if v==1000:
+        ax.set_xlabel('Diff in nsec (*1000)')
+    elif v==1:
+        ax.set_xlabel('Diff in usec')
 
-    # ax.set_xticks(x)
-    # ax.set_xticklabels(labels)
-    # ax.legend()
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.legend()
 
-    # ax.bar_label(rects1, padding=3)
-    # ax.bar_label(rects2, padding=3)
-    # ax.bar_label(rects3, padding=3)
-    # ax.bar_label(rects4, padding=3)
-    # # ax.bar_label(rects5, padding=3)
-    # # ax.bar_label(rects6, padding=3)
-    # fig.set_size_inches(18.5, 10.5)
-    # fig.tight_layout()
+    ax.bar_label(rects1, padding=3)
+    ax.bar_label(rects2, padding=3)
+    ax.bar_label(rects3, padding=3)
+    ax.bar_label(rects4, padding=3)
+    fig.set_size_inches(18.5, 10.5)
+    fig.tight_layout()
 
-    # plt.xticks(rotation='vertical')
-    # plt.yticks(rotation='vertical')
-    # plt.show()
+    plt.xticks(rotation='vertical')
+    plt.yticks(rotation='vertical')
+    plt.show()
         
 
     # break
