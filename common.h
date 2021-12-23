@@ -24,10 +24,10 @@ enum {
     PKT_BUFFER_SIZE = 128,
     PKTS_PER_BUFFER = BUFFER_SIZE/PKT_BUFFER_SIZE,                // = BUFFER_SIZE / PKT_BUFFER_SIZE
     SIZE_OF_PAGE_HC = 4096,             // hardcode
-    MAX_PKT = 100,
-    KM_FIND_BUFF_SLOT_MAX_TRY = 100,
+    MAX_PKT = 200,
+    KM_FIND_BUFF_SLOT_MAX_TRY = 200,
     /* SHIFT x == 2^(x+1) 15=65.536 16=131.072 17=262.144 18=524.288 19=1.048.576 */
-    MAX_LOG_ENTRY_SHIFT = 18,
+    MAX_LOG_ENTRY_SHIFT = 14,
     MAX_LOG_ENTRY = 2 << MAX_LOG_ENTRY_SHIFT,
     /* PAGES_PER_LOG_BUFF = 2^PAGES_ORDER = 64 pages */
     PAGES_ORDER = 6,
@@ -38,7 +38,7 @@ enum {
 
 /* Rate of while-loop */
 enum {
-    CLIENT_RATE = 0,   // rate=20 ~ 30pkt/ms will not cause zeroed
+    CLIENT_RATE = 2,   // rate=20 ~ 30pkt/ms will not cause zeroed
     /* 
     r20~30pkt/ms
     r50~48pkt/ms
@@ -47,7 +47,7 @@ enum {
 };
 
 #define DEST_PORT 8080
-#define DEST_IPADDR "192.168.1.11"
+#define DEST_IPADDR "192.168.1.24"
 
 enum  {
     PL_KEEP_ALIVE = 1,
@@ -64,6 +64,28 @@ struct Payload {
     unsigned long ks_time_arrival_2;    //nsec
     unsigned long us_time_arrival_1;    //nsec
     unsigned long us_time_arrival_2;    //nsec
+    // Extra data
+    char data[960];
+    // unsigned long data1;
+    // unsigned long data2;
+    // unsigned long data3;
+    // unsigned long data4;
+    // unsigned long data5;
+    // unsigned long data6;
+    // unsigned long data7;
+    // unsigned long data8;
+    // unsigned long data9;
+    // unsigned long data10;
+    // unsigned long data11;
+    // unsigned long data12;
+    // unsigned long data13;
+    // unsigned long data14;
+    // unsigned long data15;
+    // unsigned long data16;
+    // unsigned long data17;
+    // unsigned long data18;
+    // unsigned long data19;
+    // unsigned long data20;
 };
 
 /* //TODO: Better debug

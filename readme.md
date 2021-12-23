@@ -1,6 +1,34 @@
+# run tests
+``` bash
+### KM
+# Copy code to runbox
+rsync -avIL -e "ssh -i ~/.ssh/id_rsa" --exclude-from="rsync-only-km.txt" que@192.168.1.12:Desktop/mymodule/* /home/que/Desktop/mymodule/
+# Compile
+make km kmup s
+# kernel module:
+sudo insmod intercept-module.ko
+sudo ./user
+# server: ~/Desktop/mymodule/helper$ 
+./s km
+# remove module with sudo rmmod intercept_module
+
+### eBPF
+# Compile on dev box and copy code to runbox: ~/Desktop/mymodule/eBPF_measure$
+bash make_and_run.sh
+# server: ~/Desktop/mymodule/helper$ 
+./s ebpf
+
+### stress test
+stress --cpu 4
 
 
+### Dev box:
+./c
+```
 
+```python
+exec(open("./hist_export.py").read())
+```
 
 ## Kernel module
 ```bash

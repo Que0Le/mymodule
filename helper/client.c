@@ -59,7 +59,8 @@ int main() {
             }
             unsigned long delta = MAX_LOG_ENTRY/((stop-start)/1000000UL);
             printf("Rate sent = %lu pkt/ms\n", delta);
-            usleep(100*1000);
+            break;
+            // usleep(100*1000);
         }
         /* Prepare payload */
         // bzero(buffer, PAYLOAD_SIZE);

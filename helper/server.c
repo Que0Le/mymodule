@@ -142,6 +142,9 @@ int main(int argc, char *argv[]) {
                 pl.ks_time_arrival_1, pl.ks_time_arrival_2,
                 pl.us_time_arrival_1, pl.us_time_arrival_2);
 #endif
+        if (pl.uid == (MAX_LOG_ENTRY -1)) {
+            break;
+        }
     }
 
     /* Export log to text file */

@@ -68,15 +68,10 @@ thresholds = [
     [500, 800],
     [800, 1000],
     [1000, 100000],
+    [100000, 100000000],
 ]
 labels = []
 for i in range(0, len(thresholds)):
-    # if i==0:
-    #     l = str("-maxsize") + '-' + str(thresholds[i][1])
-    # elif i==(len(thresholds)-1):
-    #     l = str(thresholds[i][0]) + '-' + str("maxsize")
-    # else:
-    #     l = str(thresholds[i][0]) + '-' + str(thresholds[i][1])
     l = str(thresholds[i][0]) + '-' + str(thresholds[i][1])
     labels.append(l)
 
@@ -124,28 +119,23 @@ logs = [km_log, up_log, km_s_log, ebpf_log, usebpf_log, ebpf_s_log]
 logs_label = ["km_log", "up_log", "km_s_log", "ebpf_log", "usebpf_log", "ebpf_s_log"]
 logs_zeroed = [0] * len(logs)
 ###
-# diffs_up_km = [0] * len(km_log)
-# diffs_s_km = [0] * len(km_log)
-# diffs_s_up = [0] * len(km_log)
 count_diffs_up_km = {}
 count_diffs_s_km = {}
-count_diffs_s_up = {}
+# count_diffs_s_up = {}
 
-# diffs_usebpf_ebpf = [0] * len(km_log)
-# diffs_s_ebpf = [0] * len(km_log)
-# diffs_s_usebpf = [0] * len(km_log)
 count_diffs_usebpf_ebpf = {}
 count_diffs_s_ebpf = {}
-count_diffs_s_usebpf = {}
+# count_diffs_s_usebpf = {}
 
 count_diffs = [
-    count_diffs_up_km, count_diffs_s_km, count_diffs_s_up, 
-    count_diffs_usebpf_ebpf, count_diffs_s_ebpf, count_diffs_s_usebpf
+    count_diffs_up_km, count_diffs_s_km, #count_diffs_s_up, 
+    count_diffs_usebpf_ebpf, count_diffs_s_ebpf, #count_diffs_s_usebpf
 ]
-# diffs = [diffs_up_km, diffs_s_km, diffs_s_up, diffs_usebpf_ebpf, diffs_s_ebpf, diffs_s_usebpf]
+
+
 diffs_label = [
-    "diffs_up_km", "diffs_s_km", "diffs_s_up", 
-    "diffs_usebpf_ebpf", "diffs_s_ebpf", "diffs_s_usebpf"
+    "diffs_up_km", "diffs_s_km",
+    "diffs_usebpf_ebpf", "diffs_s_ebpf",
 ]
 diffs_neg = [0] * len(diffs_label)
 
@@ -160,10 +150,10 @@ ebpf_s_log = []
 to_subtract = [
     (1,0), # up_log - km_log
     (2,0), # km_s_log - km_log
-    (2,1), # km_s_log - up_log
+    #(2,1), # km_s_log - up_log
     (4,3), # usebpf_log - ebpf_log
     (5,3), # ebpf_s_log - ebpf_log
-    (5,4), # ebpf_s_log - usebpf_log
+    #(5,4), # ebpf_s_log - usebpf_log
 ]
 """ Calculate the diffs """
 for i in range(0, len(km_log)):
@@ -223,15 +213,15 @@ for i in range(0, len(diffs_label)):
 
 diff_up_km = [0] * len(thresholds)
 diff_s_km = [0] * len(thresholds)
-diff_s_up = [0] * len(thresholds)
+# diff_s_up = [0] * len(thresholds)
 
 diff_usebpf_ebpf = [0] * len(thresholds)
 diff_s_ebpf = [0] * len(thresholds)
-diff_s_usebpf = [0] * len(thresholds)
+# diff_s_usebpf = [0] * len(thresholds)
 
 diffs_count_in_threshold_ranges = [
-    diff_up_km, diff_s_km, diff_s_up,
-    diff_usebpf_ebpf, diff_s_ebpf, diff_s_usebpf
+    diff_up_km, diff_s_km, #diff_s_up,
+    diff_usebpf_ebpf, diff_s_ebpf, #diff_s_usebpf
 ]
 
 """ Export unexpected values to file to evaluate later """
