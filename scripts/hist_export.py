@@ -3,8 +3,9 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 import statistics
+import math 
 
-log_path = "/home/que/Desktop/mymodule/logs/"
+log_path = "../logs/test_suit/65k_stress_6pkpms_512Bytes#2/"
 path_km = log_path + "KM_kern.txt"
 path_km_user = log_path + "KM_user.txt"
 path_km_server_linuxsocket = log_path + "KM_socket_server.txt"
@@ -155,6 +156,11 @@ to_subtract = [
     (5,3), # ebpf_s_log - ebpf_log
     #(5,4), # ebpf_s_log - usebpf_log
 ]
+
+# raw_diffs = [
+#     count_diffs_up_km, count_diffs_s_km, #count_diffs_s_up, 
+#     count_diffs_usebpf_ebpf, count_diffs_s_ebpf, #count_diffs_s_usebpf
+# ]
 """ Calculate the diffs """
 for i in range(0, len(km_log)):
     ### Cal diffs
@@ -200,16 +206,37 @@ for i in range(0, len(diffs_label)):
     print(f"{str(diffs_label[i])}: {str(max(count_diffs[i].keys()))}-{str(min(count_diffs[i].keys()))}")
 print("#################")
 
-# count_diffs   diffs_label
+# Average
 for i in range(0, len(diffs_label)):
     sumary = 0
-    length = 0
+    sum_square_deviations = 0
+    nbr_values = sum(count_diffs[i].values())
     for key, value in count_diffs[i].items():
-        # if key<0 or key>100000:
-        #     continue
         sumary += key*value
-        length += value
-    print(f"Avg {diffs_label[i]} = {sumary/length}")
+    avg = sumary/nbr_values
+    print(f"Avg {diffs_label[i]} = {avg}")
+
+    # Standard deviation
+    for key, value in count_diffs[i].items():
+        sum_square_deviations += ((key-avg)**2) * value
+    stddev = math.sqrt(sum_square_deviations/nbr_values)
+    # print(f"Standard deviation {stddev}")
+
+# count_diffs = [
+#     count_diffs_up_km, count_diffs_s_km, #count_diffs_s_up, 
+#     count_diffs_usebpf_ebpf, count_diffs_s_ebpf, #count_diffs_s_usebpf
+# ]
+# Median
+for i in range(0, len(count_diffs)):
+    nbr_values = sum(count_diffs[i].values())
+    middle_nbr = int(nbr_values/2)
+    current_nbr_values = 0
+    sorted_keys = sorted(count_diffs[i].keys())
+    for key in sorted_keys:
+        current_nbr_values += count_diffs[i].get(key)
+        if current_nbr_values >= middle_nbr:
+            print(f"Median: {str(key)}")
+            break
 
 diff_up_km = [0] * len(thresholds)
 diff_s_km = [0] * len(thresholds)

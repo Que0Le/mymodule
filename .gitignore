@@ -4,3 +4,4 @@ venv/
 .idea
 scripts/out_range.txt
 scripts/test.py
+logs/

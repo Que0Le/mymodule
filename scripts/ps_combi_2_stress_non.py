@@ -20,7 +20,7 @@ translate_cases = {
     "65k_nonstress_6pkpms_512Bytes": "Nbr packets: 65k. None Stress. Sending rate: 6k/s. Pkt size: 512 Bytes",
     "65k_stress_6pkpms_512Bytes": "Nbr packets: 65k. Stress 100%. Sending rate: 6k/s. Pkt size: 512 Bytes",
     "524k_nonstress_50pkpms_64Bytes": "Nbr packets: 524k. None Stress. Sending rate: 50k/s. Pkt size: 64 Bytes",
-    "524k_nonstress_50pkpms_64Bytes": "Nbr packets: 524k. Stress 100%. Sending rate: 50k/s. Pkt size: 64 Bytes",
+    "524k_stress_50pkpms_64Bytes": "Nbr packets: 524k. Stress 100%. Sending rate: 50k/s. Pkt size: 64 Bytes",
 }
 
 to_usec = 1
@@ -355,15 +355,15 @@ for test_case in test_cases:
         label="T3-T1: Linux Socket App - eBPF kernel program", color="tab:orange", hatch='..', edgecolor = "black")#diff_s_ebpf")
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
-    title_postfix = f"Test-case: {translate_cases.get(test_case)}"
+    title_postfix = f"{translate_cases.get(test_case)}"
     axs[0].set_title(f"Latency diffence between kernel module and Linux socket application.\n" + title_postfix)
     axs[1].set_title(f"Latency diffence between eBPF and Linux socket application.\n" + title_postfix)
     for i in range(0, 2):
-        axs[i].set_ylabel('Number of packet in logarithmic scale')
-        if v==1000:
-            axs[i].set_xlabel('Diff in usec')
-        elif v==1:
-            axs[i].set_xlabel('Diff in nsec')
+        axs[i].set_ylabel('Nbr of packet in log scale')
+        # if v==1000:
+        #     axs[i].set_xlabel('Diff in usec')
+        # elif v==1:
+        #     axs[i].set_xlabel('Diff in nsec')
         axs[i].set_xticks(x)
         # axs[i].set_xticklabels(labels)
         axs[i].set_yscale('log')
@@ -375,12 +375,12 @@ for test_case in test_cases:
     # axs[1].bar_label(rects2, padding=3)
     # axs[0].bar_label(rects3, padding=3)
     # axs[1].bar_label(rects4, padding=3)
-    fig.set_size_inches(8, 12.5)
+    fig.set_size_inches(8, 6)
     fig.tight_layout()
 
     # plt.xticks(rotation=45)
     plt.yticks(rotation='vertical')
-    plt.subplots_adjust(bottom=0.1)
+    # plt.subplots_adjust(bottom=0.1)
     # plt.show()
     plt.savefig(f"{test_case}.png")
 
