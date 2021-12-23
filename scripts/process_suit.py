@@ -3,6 +3,7 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 import statistics
+import math 
 
 # raw_diffs_up_km = {}
 # raw_diffs_s_km = {}
@@ -80,7 +81,7 @@ for test_case in test_cases:
     # '65k_nonstress_6pkpms_512Bytes', '65k_stress_6pkpms_512Bytes'
     # '32k_nonstress_3pkpms_1024Bytes', '32k_stress_3pkpms_1024Bytes'
     logs_label = ["km_log", "up_log", "km_s_log", "ebpf_log", "usebpf_log", "ebpf_s_log"]
-    # logs_zeroed = [0] * 6#len(logs)
+    logs_zeroed = [0] * 6#len(logs)
     ###
     count_diffs_up_km = {}
     count_diffs_s_km = {}
@@ -97,7 +98,7 @@ for test_case in test_cases:
         "diffs_up_km", "diffs_s_km",
         "diffs_usebpf_ebpf", "diffs_s_ebpf",
     ]
-    # diffs_neg = [0] * len(diffs_label)
+    diffs_neg = [0] * len(diffs_label)
 
     to_subtract = [
         (1,0), # up_log - km_log
@@ -167,10 +168,7 @@ for test_case in test_cases:
             print("Files have diff length. Abort!")
             exit()
 
-        """ Check data correctness """
         logs = [km_log, up_log, km_s_log, ebpf_log, usebpf_log, ebpf_s_log]
-        logs_zeroed = [0] * len(logs)
-        diffs_neg = [0] * len(diffs_label)
 
         """ Calculate the diffs """
         for i in range(0, len(km_log)):
@@ -198,34 +196,58 @@ for test_case in test_cases:
                     count_diffs[pair_th][d] = g+1
                 else:
                     count_diffs[pair_th][d] = 1
-
-        # print("#################")
-        logs_zeroed = list(map(lambda v: int(v/2), logs_zeroed))
-        print("Zeroed: ")
-        for i in range(0, len(diffs_label)):
-            if logs_zeroed[i] != 0:
-                print(f"{str(logs_label[i])}: {str(logs_zeroed[i])}")
-        print("#################")
-        # print("Negatived: ")
-        # for i in range(0, len(diffs_label)):
-        #     if diffs_neg[i] != 0:
-        #         print(f"{str(diffs_label[i])}: {str(diffs_neg[i])}")
     """ Done collecting data for all iterations """
 
     # Because each zero value is counted twice, we modify them to correct value
-    print("#################")
-    print("Max-Min: ")
-    for i in range(0, len(diffs_label)):
-        print(f"{str(diffs_label[i])}: {str(max(count_diffs[i].keys()))}-{str(min(count_diffs[i].keys()))}")
-    print("#################")
+    logs_zeroed = list(map(lambda v: int(v/2), logs_zeroed))
 
+    print("#################")
+    print("Zeroed: ")
+    for i in range(0, len(diffs_label)):
+        if logs_zeroed[i] != 0:
+            print(f"{str(logs_label[i])}: {str(logs_zeroed[i])}")
+    print("-----------------")
+
+    diffs_median = [0] * len(diffs_label)
+    diffs_avg = [0] * len(diffs_label)
+    diffs_stddev = [0] * len(diffs_label)
+    # Average
     for i in range(0, len(diffs_label)):
         sumary = 0
-        length = 0
+        sum_square_deviations = 0
+        nbr_values = sum(count_diffs[i].values())
         for key, value in count_diffs[i].items():
             sumary += key*value
-            length += value
-        print(f"Avg {diffs_label[i]} = {sumary/length}")
+        avg = sumary/nbr_values
+        diffs_avg[i] = avg
+        # print(f"Avg {diffs_label[i]} = {avg}")
+
+        # Standard deviation
+        for key, value in count_diffs[i].items():
+            sum_square_deviations += ((key-avg)**2) * value
+        stddev = math.sqrt(sum_square_deviations/nbr_values)
+        diffs_stddev[i] = stddev
+        # print(f"Standard deviation {stddev}")
+
+    # Median
+    for i in range(0, len(diffs_label)):
+        nbr_values = sum(count_diffs[i].values())
+        middle_nbr = int(nbr_values/2)
+        current_nbr_values = 0
+        sorted_keys = sorted(count_diffs[i].keys())
+        for key in sorted_keys:
+            current_nbr_values += count_diffs[i].get(key)
+            if current_nbr_values >= middle_nbr:
+                diffs_median[i] = key
+                # print(f"Median: {str(key)}")
+                break
+    for i in range(0, len(diffs_label)):
+        print(diffs_label[i])
+        print(f"  Max-Min : {str(max(count_diffs[i].keys()))}-{str(min(count_diffs[i].keys()))}")
+        print(f"  Negative: {str(diffs_neg[i])}")
+        print(f"  Median  : {str(diffs_median[i])}")
+        print(f"  Average : {str(diffs_avg[i])}")
+        print(f"  Stddev  : {str(diffs_stddev[i])}")
 
     diff_up_km = [0] * len(thresholds)
     diff_s_km = [0] * len(thresholds)
