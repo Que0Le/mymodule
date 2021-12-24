@@ -21,10 +21,94 @@ bash make_and_run.sh
 ### stress test
 stress --cpu 4
 
-
 ### Dev box:
 ./c
+
+### Copy data to dev machine:
+scp -r -i ~/.ssh/id_rsa /home/que/Desktop/mymodule/logs/*.txt que@192.168.1.12:Desktop/mymodule/logs/
+# Run quick test on dev machine
+python check_improved_plot.py
 ```
+
+# Plot
+Test should be organized in `logs/test_suit/` as follow:
+```bash
+|-- test_suit
+|   |-- 32k_nonstress_3pkpms_1024Bytes#1
+|   |   |-- EBPF_kern.txt
+|   |   |-- EBPF_socket_server.txt
+|   |   |-- EBPF_user.txt
+|   |   |-- KM_kern.txt
+|   |   |-- KM_socket_server.txt
+|   |   |-- KM_user.txt
+|   |-- 32k_nonstress_3pkpms_1024Bytes#2
+|   |   |-- ...
+|   |-- 32k_nonstress_3pkpms_1024Bytes#3
+|   |   |-- ...
+|   |-- 32k_nonstress_3pkpms_1024Bytes#4
+|   |   |-- ...
+|   |-- 32k_nonstress_3pkpms_1024Bytes#5
+|   |   |-- ...
+|   |-- 32k_stress_3pkpms_1024Bytes#1
+|   |   |-- ...
+|   |-- 32k_stress_3pkpms_1024Bytes#2
+|   |   |-- ...
+|   |-- 32k_stress_3pkpms_1024Bytes#3
+|   |   |-- ...
+|   |-- 32k_stress_3pkpms_1024Bytes#4
+|   |   |-- ...
+|   |-- 32k_stress_3pkpms_1024Bytes#5
+|   |   |-- ...
+|   |-- 524k_nonstress_50pkpms_64Bytes#1
+|   |   |-- ...
+|   |-- 524k_nonstress_50pkpms_64Bytes#2
+|   |   |-- ...
+|   |-- 524k_nonstress_50pkpms_64Bytes#3
+|   |   |-- ...
+|   |-- 524k_nonstress_50pkpms_64Bytes#4
+|   |   |-- ...
+|   |-- 524k_nonstress_50pkpms_64Bytes#5
+|   |   |-- ...
+|   |-- 524k_stress_50pkpms_64Bytes#1
+|   |   |-- ...
+|   |-- 524k_stress_50pkpms_64Bytes#2
+|   |   |-- ...
+|   |-- 524k_stress_50pkpms_64Bytes#3
+|   |   |-- ...
+|   |-- 524k_stress_50pkpms_64Bytes#4
+|   |   |-- ...
+|   |-- 524k_stress_50pkpms_64Bytes#5
+|   |   |-- ...
+|   |-- 65k_nonstress_6pkpms_512Bytes#1
+|   |   |-- ...
+|   |-- 65k_nonstress_6pkpms_512Bytes#2
+|   |   |-- ...
+|   |-- 65k_nonstress_6pkpms_512Bytes#3
+|   |   |-- ...
+|   |-- 65k_nonstress_6pkpms_512Bytes#4
+|   |   |-- ...
+|   |-- 65k_nonstress_6pkpms_512Bytes#5
+|   |   |-- ...
+|   |-- 65k_stress_6pkpms_512Bytes#1
+|   |   |-- ...
+|   |-- 65k_stress_6pkpms_512Bytes#2
+|   |   |-- ...
+|   |-- 65k_stress_6pkpms_512Bytes#3
+|   |   |-- ...
+|   |-- 65k_stress_6pkpms_512Bytes#4
+|   |   |-- ...
+|   |-- 65k_stress_6pkpms_512Bytes#5
+|       |-- ...
+```
+Run scripts in `scripts/`:
+```python
+python3 -m venv venv
+. venv/bin/activate
+python ps_combi_2_stress_non.py   # process suit combi 2 (sub graphs) of stress and non-stress
+```
+
+
+
 
 ```python
 exec(open("./hist_export.py").read())
@@ -109,7 +193,7 @@ sudo -H gedit /etc/default/grub
 GRUB_DEFAULT="Advanced options for Ubuntu>Ubuntu, with Linux 5.8.0-63-generic"
 sudo update-grub
 ```
-
+ 
 Processing log files with python
 ```bash
 # linux
