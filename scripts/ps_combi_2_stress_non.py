@@ -15,12 +15,12 @@ import math
 # ]
 
 translate_cases = {
-    "32k_nonstress_3pkpms_1024Bytes": "Nbr packets: 32k. None Stress. Sending rate: 3k/s. Pkt size: 1024 Bytes",
-    "32k_stress_3pkpms_1024Bytes": "Nbr packets: 32k. Stress 100%. Sending rate: 3k/s. Pkt size: 1024 Bytes",
-    "65k_nonstress_6pkpms_512Bytes": "Nbr packets: 65k. None Stress. Sending rate: 6k/s. Pkt size: 512 Bytes",
-    "65k_stress_6pkpms_512Bytes": "Nbr packets: 65k. Stress 100%. Sending rate: 6k/s. Pkt size: 512 Bytes",
-    "524k_nonstress_50pkpms_64Bytes": "Nbr packets: 524k. None Stress. Sending rate: 50k/s. Pkt size: 64 Bytes",
-    "524k_stress_50pkpms_64Bytes": "Nbr packets: 524k. Stress 100%. Sending rate: 50k/s. Pkt size: 64 Bytes",
+    "32k_nonstress_3pkpms_1024Bytes": "Non-Stress. Nbr packets: 32k. Sending rate: 3k/s. Pkt size: 1024 Bytes",
+    "32k_stress_3pkpms_1024Bytes": "System Stress 100%. Nbr packets: 32k. Sending rate: 3k/s. Pkt size: 1024 Bytes",
+    "65k_nonstress_6pkpms_512Bytes": "Non-Stress. Nbr packets: 65k. Sending rate: 6k/s. Pkt size: 512 Bytes",
+    "65k_stress_6pkpms_512Bytes": "System Stress 100%. Nbr packets: 65k. Sending rate: 6k/s. Pkt size: 512 Bytes",
+    "524k_nonstress_50pkpms_64Bytes": "Non-Stress. Nbr packets: 524k. Sending rate: 50k/s. Pkt size: 64 Bytes",
+    "524k_stress_50pkpms_64Bytes": "System Stress 100%. Nbr packets: 524k. Sending rate: 50k/s. Pkt size: 64 Bytes",
 }
 
 to_usec = 1
@@ -338,26 +338,26 @@ for test_case in test_cases:
 
     """ Plotting """
     x = np.arange(len(labels))  # the label locations
-    width = 0.3  # the width of the bars
+    width = 0.35  # the width of the bars. 0.3
 
     fig, axs = plt.subplots(2,1)
     rects1 = axs[0].bar(
         x - 0.5*width, diff_up_km, width,
-        label="T2-T1: User Processing - Kernel Module", color="tab:blue", edgecolor = "black")#___diff_up_km:')
+        label="T2-T1: US program - KM program", color="tab:blue", edgecolor = "black")#___diff_up_km:')
     rects2 = axs[1].bar(
         x - 0.5*width, diff_usebpf_ebpf, width,
-        label="T2-T1: User-space App - eBPF kernel program", color="tab:olive", edgecolor = "black")#diff_usebpf_ebpf")
+        label="T2-T1: US program - eBPF kernel program", color="tab:olive", edgecolor = "black")#diff_usebpf_ebpf")
     rects3 = axs[0].bar(
         x + 0.5*width, diff_s_km, width, 
-        label="T3-T1: Linux Socket App - Kernel Module", color="tab:pink", hatch='//', edgecolor = "black")#diff_s_km")
+        label="T3-T1: US socket program - KM program", color="tab:pink", hatch='//', edgecolor = "black")#diff_s_km")
     rects4 = axs[1].bar(
         x + 0.5*width, diff_s_ebpf, width, 
-        label="T3-T1: Linux Socket App - eBPF kernel program", color="tab:orange", hatch='..', edgecolor = "black")#diff_s_ebpf")
+        label="T3-T1: US socket program - eBPF kernel program", color="tab:orange", hatch='..', edgecolor = "black")#diff_s_ebpf")
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
     title_postfix = f"{translate_cases.get(test_case)}"
-    axs[0].set_title(f"Latency diffence between kernel module and Linux socket application.\n" + title_postfix)
-    axs[1].set_title(f"Latency diffence between eBPF and Linux socket application.\n" + title_postfix)
+    axs[0].set_title(f"Distribution of latency ranges in usec between kernel module and Linux socket application.\n" + title_postfix)
+    axs[1].set_title(f"Distribution of latency ranges between eBPF and Linux socket application.\n" + title_postfix)
     for i in range(0, 2):
         axs[i].set_ylabel('Nbr of packet in log scale')
         # if v==1000:
@@ -375,7 +375,7 @@ for test_case in test_cases:
     # axs[1].bar_label(rects2, padding=3)
     # axs[0].bar_label(rects3, padding=3)
     # axs[1].bar_label(rects4, padding=3)
-    fig.set_size_inches(8, 6)
+    fig.set_size_inches(8.5, 6)
     fig.tight_layout()
 
     # plt.xticks(rotation=45)
