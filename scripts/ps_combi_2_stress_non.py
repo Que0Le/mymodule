@@ -15,12 +15,12 @@ import math
 # ]
 
 translate_cases = {
-    "32k_nonstress_3pkpms_1024Bytes": "Non-Stress. Nbr packets: 32k. Sending rate: 3k/s. Pkt size: 1024 Bytes",
-    "32k_stress_3pkpms_1024Bytes": "System Stress 100%. Nbr packets: 32k. Sending rate: 3k/s. Pkt size: 1024 Bytes",
-    "65k_nonstress_6pkpms_512Bytes": "Non-Stress. Nbr packets: 65k. Sending rate: 6k/s. Pkt size: 512 Bytes",
-    "65k_stress_6pkpms_512Bytes": "System Stress 100%. Nbr packets: 65k. Sending rate: 6k/s. Pkt size: 512 Bytes",
-    "524k_nonstress_50pkpms_64Bytes": "Non-Stress. Nbr packets: 524k. Sending rate: 50k/s. Pkt size: 64 Bytes",
-    "524k_stress_50pkpms_64Bytes": "System Stress 100%. Nbr packets: 524k. Sending rate: 50k/s. Pkt size: 64 Bytes",
+    "32k_nonstress_3pkpms_1024Bytes": ["Non-Stress", "Nbr packets: 32k. Sending rate: 3k/s. Pkt size: 1024 Bytes"],
+    "32k_stress_3pkpms_1024Bytes": ["System Stress 100%", "Nbr packets: 32k. Sending rate: 3k/s. Pkt size: 1024 Bytes"],
+    "65k_nonstress_6pkpms_512Bytes": ["Non-Stress", "Nbr packets: 65k. Sending rate: 6k/s. Pkt size: 512 Bytes"],
+    "65k_stress_6pkpms_512Bytes": ["System Stress 100%", "Nbr packets: 65k. Sending rate: 6k/s. Pkt size: 512 Bytes"],
+    "524k_nonstress_50pkpms_64Bytes": ["Non-Stress", "Nbr packets: 524k. Sending rate: 50k/s. Pkt size: 64 Bytes"],
+    "524k_stress_50pkpms_64Bytes": ["System Stress 100%", "Nbr packets: 524k. Sending rate: 50k/s. Pkt size: 64 Bytes"],
 }
 
 to_usec = 1
@@ -355,9 +355,16 @@ for test_case in test_cases:
         label="T3-T1: US socket program - eBPF kernel program", color="tab:orange", hatch='..', edgecolor = "black")#diff_s_ebpf")
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
-    title_postfix = f"{translate_cases.get(test_case)}"
-    axs[0].set_title(f"Distribution of latency ranges in usec between kernel module and Linux socket application.\n" + title_postfix)
-    axs[1].set_title(f"Distribution of latency ranges between eBPF and Linux socket application.\n" + title_postfix)
+    case = translate_cases.get(test_case)
+    axs[0].set_title(
+        "Distribution of latency ranges in usec between kernel-arrival and user-space arrival.\n" +
+        case[0] +
+        ". Kernel Module vs Linux socket. Median T2-T1: " + str(diffs_median[0]/1000) + " T3-T1:" + str(diffs_median[1]/1000)
+    )
+    axs[1].set_title(
+        case[0] + 
+        ". eBPF vs Linux socket. Median T2-T1: " + str(diffs_median[2]/1000) + " ,T3-T1: " + str(diffs_median[3]/1000)
+    )
     for i in range(0, 2):
         axs[i].set_ylabel('Nbr of packet in log scale')
         # if v==1000:
@@ -370,12 +377,12 @@ for test_case in test_cases:
         axs[i].legend()
         axs[i].set_xticklabels(labels, rotation=45)
         # axs[i].set_yticklabels(rotation='vertical')
-
+    axs[1].set_xlabel(case[1] + ". Latency in microsecond", fontweight="bold", fontsize="large")
     # axs[0].bar_label(rects1, padding=3)
     # axs[1].bar_label(rects2, padding=3)
     # axs[0].bar_label(rects3, padding=3)
     # axs[1].bar_label(rects4, padding=3)
-    fig.set_size_inches(8.5, 6)
+    fig.set_size_inches(8, 5.5)
     fig.tight_layout()
 
     # plt.xticks(rotation=45)
