@@ -267,6 +267,7 @@ for test_case in test_cases:
     # print("#################")
 
     diffs_median = [0] * len(diffs_label)
+    diffs_99_procent = [0] * len(diffs_label)
     diffs_avg = [0] * len(diffs_label)
     diffs_stddev = [0] * len(diffs_label)
     # Average
@@ -291,19 +292,23 @@ for test_case in test_cases:
     for i in range(0, len(diffs_label)):
         nbr_values = sum(count_diffs[i].values())
         middle_nbr = int(nbr_values/2)
+        ninenine_nbr = int(nbr_values*99/100)
         current_nbr_values = 0
         sorted_keys = sorted(count_diffs[i].keys())
         for key in sorted_keys:
             current_nbr_values += count_diffs[i].get(key)
-            if current_nbr_values >= middle_nbr:
+            if diffs_median[i] == 0 and current_nbr_values >= middle_nbr:
                 diffs_median[i] = key
-                # print(f"Median: {str(key)}")
+            if current_nbr_values >= ninenine_nbr:
+                diffs_99_procent[i] = key
                 break
+
     for i in range(0, len(diffs_label)):
         print(diffs_label[i])
         print(f"  Max-Min : {str(max(count_diffs[i].keys()))}-{str(min(count_diffs[i].keys()))}")
         print(f"  Negative: {str(diffs_neg[i])}")
         print(f"  Median  : {str(diffs_median[i])}")
+        print(f"  99%  : {str(diffs_99_procent[i])}")
         print(f"  Average : {str(diffs_avg[i])}")
         print(f"  Stddev  : {str(diffs_stddev[i])}")
 
@@ -356,17 +361,31 @@ for test_case in test_cases:
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
     case = translate_cases.get(test_case)
+    # loss_pkt_km_text = ""
+    loss_pkt_km_text = f"Loss pkt: KM={logs_zeroed[1]} LS={logs_zeroed[2]}"# if logs_zeroed[2]!=0 else ""
+
+
+    # loss_pkt_ebpf_text = ""
+    loss_pkt_ebpf_text = f"Loss pkt: KM={logs_zeroed[4]} LS={logs_zeroed[5]}"
     axs[0].set_title(
         "Distribution of latency ranges in usec between kernel-arrival and user-space arrival.\n" +
         case[0] +
-        ". Kernel Module vs Linux socket. Median T2-T1: " + str(diffs_median[0]/1000) + " T3-T1:" + str(diffs_median[1]/1000)
-    )
+        ". Kernel Module vs Linux socket application. " + loss_pkt_km_text + "\n" +
+        "T2-T1: Median=" + str(diffs_median[0]/1000) +  ", 99%<" + str(diffs_99_procent[0]/1000) + 
+        " | " +
+        "T3-T1: Median=" + str(diffs_median[1]/1000) +  ", 99%<" + str(diffs_99_procent[1]/1000)
+        # f"Loss pkt: KM={logs_zeroed[2]}" if logs_zeroed[2]!=0 else "" +
+        # f"Loss pkt: LS={logs_zeroed[5]}" if logs_zeroed[5]!=0 else ""
+    )#+ LS={logs_zeroed[5]}"
     axs[1].set_title(
         case[0] + 
-        ". eBPF vs Linux socket. Median T2-T1: " + str(diffs_median[2]/1000) + " ,T3-T1: " + str(diffs_median[3]/1000)
+        ". eBPF vs Linux socket application. " + loss_pkt_ebpf_text + "\n" +
+        "T2-T1: Median=" + str(diffs_median[2]/1000) +  ", 99%<" + str(diffs_99_procent[2]/1000) + 
+        " | " +
+        "T3-T1: Median=" + str(diffs_median[3]/1000) +  ", 99%<" + str(diffs_99_procent[3]/1000)
     )
     for i in range(0, 2):
-        axs[i].set_ylabel('Nbr of packet in log scale')
+        # axs[i].set_ylabel('Nbr of packet in log scale')
         # if v==1000:
         #     axs[i].set_xlabel('Diff in usec')
         # elif v==1:
@@ -377,12 +396,12 @@ for test_case in test_cases:
         axs[i].legend()
         axs[i].set_xticklabels(labels, rotation=45)
         # axs[i].set_yticklabels(rotation='vertical')
-    axs[1].set_xlabel(case[1] + ". Latency in microsecond", fontweight="bold", fontsize="large")
+    # axs[1].set_xlabel(case[1] + ". Latency in microsecond", fontweight="bold", fontsize="large")
     # axs[0].bar_label(rects1, padding=3)
     # axs[1].bar_label(rects2, padding=3)
     # axs[0].bar_label(rects3, padding=3)
     # axs[1].bar_label(rects4, padding=3)
-    fig.set_size_inches(8, 5.5)
+    fig.set_size_inches(8.2, 6)
     fig.tight_layout()
 
     # plt.xticks(rotation=45)
