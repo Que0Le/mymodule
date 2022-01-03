@@ -362,11 +362,11 @@ for test_case in test_cases:
     # Add some text for labels, title and custom x-axis tick labels, etc.
     case = translate_cases.get(test_case)
     # loss_pkt_km_text = ""
-    loss_pkt_km_text = f"Loss pkt: KM={logs_zeroed[1]} LS={logs_zeroed[2]}"# if logs_zeroed[2]!=0 else ""
+    loss_pkt_km_text = f"Loss pkt: KM={abs(2*logs_zeroed[0]-logs_zeroed[1])} LS={abs(2*logs_zeroed[0]-logs_zeroed[2])}"# if logs_zeroed[2]!=0 else ""
 
 
     # loss_pkt_ebpf_text = ""
-    loss_pkt_ebpf_text = f"Loss pkt: KM={logs_zeroed[4]} LS={logs_zeroed[5]}"
+    loss_pkt_ebpf_text = f"Loss pkt: eBPF={abs(2*logs_zeroed[3]-logs_zeroed[4])} LS={abs(2*logs_zeroed[3]-logs_zeroed[5])}"
     axs[0].set_title(
         "Distribution of latency ranges in usec between kernel-arrival and user-space arrival.\n" +
         case[0] +
