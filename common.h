@@ -38,7 +38,10 @@ enum {
 
 /* Rate of while-loop */
 enum {
-    CLIENT_RATE = 2,   // rate=20 ~ 30pkt/ms will not cause zeroed
+    /* This rates are based on the dev machine. Adapt them to your machine! */
+    // CLIENT_RATE = 2,   // rate=3k pps
+    // CLIENT_RATE = 4,   // rate=6k pps
+    CLIENT_RATE = 50,   // rate=50k pps
     /* 
     r20~30pkt/ms
     r50~48pkt/ms
@@ -65,27 +68,8 @@ struct Payload {
     unsigned long us_time_arrival_1;    //nsec
     unsigned long us_time_arrival_2;    //nsec
     // Extra data
-    char data[960];
-    // unsigned long data1;
-    // unsigned long data2;
-    // unsigned long data3;
-    // unsigned long data4;
-    // unsigned long data5;
-    // unsigned long data6;
-    // unsigned long data7;
-    // unsigned long data8;
-    // unsigned long data9;
-    // unsigned long data10;
-    // unsigned long data11;
-    // unsigned long data12;
-    // unsigned long data13;
-    // unsigned long data14;
-    // unsigned long data15;
-    // unsigned long data16;
-    // unsigned long data17;
-    // unsigned long data18;
-    // unsigned long data19;
-    // unsigned long data20;
+    // char data[960];  // 1024k
+    // char data[448];  // 512k
 };
 
 /* //TODO: Better debug

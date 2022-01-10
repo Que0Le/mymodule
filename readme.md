@@ -25,9 +25,11 @@ stress --cpu 4
 ./c
 
 ### Copy data to dev machine:
-scp -r -i ~/.ssh/id_rsa /home/que/Desktop/mymodule/logs/*.txt que@192.168.1.12:Desktop/mymodule/logs/
+scp -r -i ~/.ssh/id_rsa /home/que/Desktop/mymodule/logs/*.txt que@192.168.1.12:Desktop/mymodule/logs/; sudo rm /home/que/Desktop/mymodule/logs/*.txt
 # Run quick test on dev machine
 python check_improved_plot.py
+# after first run can use:
+# sudo ./ebpf_measure_user -d ens33 --filename ebpf_measure_kern.o
 ```
 
 # Plot
@@ -101,10 +103,11 @@ Test should be organized in `logs/test_suit/` as follow:
 |       |-- ...
 ```
 Run scripts in `scripts/`:
-```python
+```bash
 python3 -m venv venv
 . venv/bin/activate
-python ps_combi_2_stress_non.py   # process suit combi 2 (sub graphs) of stress and non-stress
+python3 ps_combi_2_stress_non.py   # process suit combi 2 (sub graphs) of stress and non-stress
+python3 process_suit_combi_4.py  # combine all test, split into stress and non-stress
 ```
 
 

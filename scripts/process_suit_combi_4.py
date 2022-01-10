@@ -363,7 +363,7 @@ for stress_condition in ["System Stress 100%", "Non-Stress"]:
         # plt.xticks(rotation=45)
         plt.yticks(rotation='vertical')
         # plt.subplots_adjust(bottom=0.1)
-        plt.savefig(f"combined_{stress_condition.replace(' ', '_').replace('%', '')}_{yscale}.png")
+        plt.savefig(f"combined_{stress_condition.replace(' ', '_').replace('%', '').replace('-', '_')}_{yscale}.png")
         plt.show()
 
         
